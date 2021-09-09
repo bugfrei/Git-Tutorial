@@ -1,9 +1,9 @@
 ﻿function MakeContentFile($filename)
-{
+{ 
     $file = New-Item -ItemType File -Name $filename
 
     [Random] $rnd = [Random]::new()
-    $loremLength = $rnd.Next(1,20)
+    $loremLength = $rnd.Next(1, 20)
     
     $content = Invoke-RestMethod -uri "https://baconipsum.com/api/?type=meat-and-filler&sentences=$loremLength"
     Set-Content $file -Value $content
@@ -25,7 +25,8 @@ function rot($t, $lf = 1)
     }
 }
 
-function rep([string] $t) {
+function rep([string] $t)
+{
     return ([string] $t).Replace("#rep", "Repository").Replace("#com", "Commit")
 }
 Function Init
@@ -35,16 +36,17 @@ Function Init
         $silent = 0
     )
     $dir = "$([System.Environment]::GetFolderPath("user"))\GIT_LESSON1"
-    cd c:\
+    Set-Location c:\
     if (Test-Path $dir)
     {
         Remove-Item $dir -Recurse -Force
     }
-    md $dir | Out-Null
-    cd $dir
+    mkdir $dir | Out-Null
+    Set-Location $dir
 
-    md Code1 | Out-Null
-    cd Code1
+
+    mkdir Code1 | Out-Null
+    Set-Location Code1
 
     MakeContentFile "text.txt"
     MakeContentFile "datei1.txt"
@@ -73,7 +75,8 @@ Function Init
 }
 
 
-function Schritt {
+function Schritt
+{
     [CmdletBinding()]
     [Alias("s")]
     param(
@@ -89,10 +92,11 @@ function Schritt {
     if ($nr -gt 2) { git add --all }
     if ($nr -gt 3) { git commit --message "Start" }
     if ($nr -gt 4) { Set-Content -Path leer.txt -Value "Änderung" }
-    if ($nr -gt 5) {
-            git add --all
-            git commit --message "kleine Änderung"
-        }
+    if ($nr -gt 5)
+    {
+        git add --all
+        git commit --message "kleine Änderung"
+    }
 
     $global:schritt = $nr
     weiter
@@ -113,7 +117,7 @@ class Kapitel
 
     [void] Ausgabe()
     {
-        $text = $this.id + (" " * (5-$this.id.Length)) + $this.bezeichnung
+        $text = $this.id + (" " * (5 - $this.id.Length)) + $this.bezeichnung
         Write-Host $text
     }
 
@@ -148,23 +152,24 @@ function Zurück
     Jump (([int]$global:schritt) - 2)
 }
 
-function Inhalt {
+function Inhalt
+{
     [CmdletBinding()]
     param(
     )
     
     $alle = @([Kapitel]::new(1, 1, "Der Anfang"),
-              [Kapitel]::new(2, 3, "Erstes Commit")
-              )
+        [Kapitel]::new(2, 3, "Erstes Commit")
+    )
 
     [Kapitel]::Titel()
-    foreach($k in $alle)
+    foreach ($k in $alle)
     {
         $k.Ausgabe()
     }
 
     $ein = Read-Host -Prompt "`nBitte Nr. eingeben"
-    $alle[$ein-1].Start()
+    $alle[$ein - 1].Start()
 }
 
 function Weiter
@@ -173,7 +178,7 @@ function Weiter
     [Alias("w")]
     param
     (
-    $nr = -1
+        $nr = -1
     )
     
     if ($nr -eq -1)
@@ -181,37 +186,47 @@ function Weiter
         $nr = $global:schritt
     }
 
-    $st = "Schritt $nr"; Write-Host (" "*($st.Length)*3 +  "`n" + " " *($st.Length) + $st + " " * ($st.Length) + "`n" + " "*($st.Length)*3)  -BackgroundColor Gray -ForegroundColor Black
+    $st = "Schritt $nr"; Write-Host (" " * ($st.Length) * 3 + "`n" + " " * ($st.Length) + $st + " " * ($st.Length) + "`n" + " " * ($st.Length) * 3)  -BackgroundColor Gray -ForegroundColor Black
     switch ($nr)
     {
-        1 {
+        1
+        {
             gelb "Git für $dir\Code1 Initialisieren (#rep erstellen)" 
             grau "Der Befehl 'init' erstellt ein leeres #rep im aktuellen Ordner" 
             Write-Host "Und denk daran, mit w (oder weiter) geht es weiter" -ForegroundColor Cyan
             rot "git init"
-            break }
-        2 {
+            break 
+        }
+        2
+        {
             gelb "Als erstes müssen alle Dateien als #com in das #rep aufgenommen werden"
             grau "Der Befehl add fügt Dateien dem #com hinzu. Entwerder einzelln (hier natürlich auch Dateien, die gelöscht wurden)"
             grau "oder alle auf einmal mit git add --all"
             rot "git add --all" 
-            break }
-        3 {
+            break 
+        }
+        3
+        {
             gelb "Nun machen wir den ersten #com und übertragen den aktuellen Stand in das #rep."
             grau "Jedes #com benötigt eine Message, also eine Information zum aktuellen #com. Hier sollte kurz eingetragen werden, was das #com aus macht."
             rot "git commit --message `"Start`""
-            break }
-        4 {
+            break 
+        }
+        4
+        {
             gelb "Nun schreiben wir in die Datei 'leer.txt' eine Zeile mit 'Änderung' und speichern diese ab."
             Read-Host "Bereit? (drücke Return)"
             Invoke-Item leer.txt
-            break }
-        5 {
+            break 
+        }
+        5
+        {
             gelb "Nun möchten wir das diese Änderung in das #rep übertragen wird."
             rot "git add --all" 
             rot "git commit --message `"kleine Änderung`"" 0
 
-            break }
+            break 
+        }
     }
     
     $nr++
