@@ -12,6 +12,9 @@
 function gelb($t) { $t = (rep $t); Write-Host $t -ForegroundColor Yellow }
 function grün($t) { $t = (rep $t); Write-Host $t -ForegroundColor Green }
 function grau($t) { $t = (rep  $t); Write-Host $t -ForegroundColor Gray }
+function weiss($t) { $t = (rep  $t); Write-Host $t -ForegroundColor White }
+function cyan($t) { $t = (rep  $t); Write-Host $t -ForegroundColor Cyan }
+
 function rot($t, $lf = 1)
 { 
     $t = (rep $t)
@@ -25,9 +28,42 @@ function rot($t, $lf = 1)
     }
 }
 
+function Edit($file, $ask = 0)
+{
+    if ($ask -eq 1)
+    {
+        Read-Host "`nBereit? (drücke Return)"
+    }
+    if ($Global:Editor)
+    {
+        if ($Global:Editor -eq "vim")
+        {
+            vim $file
+        }
+        else
+        {
+            Start-Process $Global:Editor -ArgumentList $file
+        }
+    }
+    else
+    {
+        $f = Get-Item $file
+        if ($f.Extension -eq ".TXT")
+        {
+            Invoke-Item $file    
+        }
+        else
+        {
+            Start-Process "notepad" -ArgumentList $file
+        }
+    }
+    
+
+}
 function rep([string] $t)
 {
-    return ([string] $t).Replace("#rep", "Repository").Replace("#com", "Commit")
+    . L:\GIT\GitTutorial\Tutorial-DE.ps1
+    return ([string] $t).Replace("#rep", "Repository").Replace("#com", "Commit").Replace("#sta", "Stage-Bereich").Replace("#work", "Workspace").Replace("#wor", "Workspace").Replace("~", "`n").Replace("´", "`"").Replace("#hcom", "HEAD-Commit")
 }
 Function Init
 {
@@ -35,6 +71,8 @@ Function Init
     param(
         $silent = 0
     )
+    $PSDefaultParameterValues['*:Encoding'] = 'utf8'
+
     $dir = "$([System.Environment]::GetFolderPath("user"))\GIT_LESSON1"
     Set-Location c:\
     if (Test-Path $dir)
@@ -112,6 +150,49 @@ Install            : Informationen zur Installation von git"
             w
             return
         }
+
+        if (-not ($Global:Editor) -or ($Global:Editor:Editor -eq $null) -or ($Global:Editor -eq ""))
+        {
+            weiss "Welchen Text-Editor möchtest Du verwenden?~"
+            if (HasVIM)
+            {
+                weiss "V.  VIM"
+            }
+            else
+            {
+                if (HasChoco)
+                {
+                    weiss "V. VIM (vorher automatisch installieren)"
+                }
+            }
+            weiss "N. Notepad"   
+            weiss "S. Standard Windows Text-Editor (für .txt Dateien)"
+            $ein = Read-Host -Prompt "Bitte wählen"
+            if ($ein -eq "V")
+            {
+                if (HasVim)
+                {
+                    $Global:Editor = "vim"
+                }
+                else
+                {
+                    if (HasChoco)
+                    {
+                        choco install vim -y
+                        $Global:Editor = "vim"
+                    }
+                }
+            }
+            if ($ein -eq "N")
+            {
+                $Global:Editor = "notepad"
+            }
+            if ($ein -eq "S")
+            {
+                $Global:Editor = ""
+            }
+        }
+
         info 
         hilfe
         rot "Gebe zuerst mal Hilfe ein, gefolgt von einem Space und drücke dann die Tabulator-Taste ein paar mal (oder Strg+Space)"
@@ -207,10 +288,33 @@ function Anweisung
     )
 
     $Global:schritt = $Global:schritt - 1
-    Weiter
+    Weiter -anweisung $true
 }
 
-# @Test
+function config
+{
+    [CmdletBinding()]
+    [Alias("cfg")]
+    param(
+    )   
+    
+    cls
+    rot "Konfiguration von Git"
+    gelb "`nWir Konfigurieren nun Git. Hier gibt es viele Einstellungemöglichkeiten, wobei 3 wichtig sind:"
+    Write-Host "user.name  : Der Benutzername"
+    Write-Host "user.email : Deine E-Mail Adresse"
+    Write-Host "core.editor: Einen Editor damit man in git auch Eingaben machen kann."
+    grau "`nDiese Konfiguration hat NICHTS mit Github zu tun. Es ist nur wichtig, damit in einem #com der Name/E-Mail Addresse des Benutzer gespeichert werden kann. Damit kann man später sehen: wer hat was gemacht."
+    gelb "`nGebe folgendes ein (bzw. passe Name, E-Mail Adresse noch an):"
+    [String] $un = $Env:USERNAME
+    $em = $un.Replace(" ", ".")
+    rot "git config --global user.name `"$un`""
+    rot "git config --global user.email `"${em}@gmail.com`"" 0
+    rot "git config --global core.editor code" 0
+
+    grau "`nAnstelle von code kannst du natürlich auch andere Editoren verwenden (notfalls notepad)."
+
+}
 
 function Install
 {
@@ -286,6 +390,13 @@ function Install
             }
 
             choco install git -y --force -force
+            Start-Sleep -Seconds 2
+            if (HasGit)
+            {
+                config
+                gelb "Danach die Powershell neu starten (Administrator ist nicht nötig), das Tutorial-Skript neu ausführen."
+                return
+            }
             $Global:schritt = -9999999
             break
         }
@@ -298,6 +409,20 @@ function Test-AdminRecht
     $user = [Security.Principal.WindowsIdentity]::GetCurrent();
     (New-Object Security.Principal.WindowsPrincipal $user).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 }
+function HasVIM()
+{
+    try
+    {
+        [string] $v = vim --version | Out-String
+        return ($v.StartsWith("VIM - Vi IMproved"))
+    }
+    catch
+    {
+
+    }
+    return false
+}
+
 function HasChoco()
 {
     try
@@ -331,7 +456,9 @@ function Hilfe
     [CmdletBinding()]
     [Alias("help")]
     param(
-        [ValidateSet("Befehle", "^", "Kopieren", "Lange Textausgaben", "Textfarben")]
+        [ValidateSet("Befehle", "^", "Kopieren", 
+            "Lange Textausgaben", "Textfarben",
+            "Commit", "Repositoy", "Tag")]
         $Was = "Befehle"
     )
 
@@ -373,7 +500,62 @@ Texte in Gruen stellen Beispiele dar
 Texte in Grau stellen zusätzliche Informationen dar
 Texte in Rot stellt die Anweisung oder die Befehlszeile dar, die exakt so eingegeben werden muss" -ForegroundColor Cyan
     }
+    elseif ($Was -eq "Repository")
+    {
+        # TODO HILFE: Repository beschreiben
+    }
+    elseif ($was -eq "Commit")
+    {
+        # TODO HILFE: Commit beschreiben
+    }
+    elseif ($Was -eq "Tag")
+    {
+        # TODO HILFE: Tag beschreiben
+    }
+    elseif ($was -eq "Stage-Bereich")
+    {
+        # TODO HILFE: Stage-Bereich beschreiben
+        
+    }
+
+    # TODO HILFE <--------------
 }
+
+
+function Make19
+{
+    if (Test-Path neu)
+    {
+        return
+    }
+    @("Zweiter Ordner", "temp", "Dokumentation", "neu") | ForEach-Object {
+        New-Item -ItemType Directory -Path $_  | Out-Null
+        New-Item -ItemType Directory -Path "$_\Unterordner" | Out-Null
+        New-Item -ItemType File -Path "$_\datei.txt" | Out-Null
+        New-Item -ItemType File -Path "$_\Unterordner\readme.txt" | Out-Null
+    }
+    Set-Content ".\neu\Unterordner\readme.txt" -Value "die anderen Dateien sind leer."
+
+}
+
+function fragen($frage, [switch] $jaDefault)
+{
+    $def = " (j/N)"
+    if ($jaDefault)
+    {
+        $def = " (J/n)"
+    }
+    $ein = Read-Host -Prompt ($frage + $def)
+    if ($jaDefault)
+    {
+        return -not ($ein -eq "N")
+    }
+    else
+    {
+        return $ein -eq "J"
+    }
+}
+
 
 function Inhalt
 {
@@ -395,7 +577,7 @@ function Inhalt
         )
     }
 
-    <# TODO (Inhalt) Kapitel definieren #>
+    <# TODO __3__(Inhalt) Kapitel definieren #>
 
     [Kapitel]::Titel()
     foreach ($k in $alle)
@@ -415,6 +597,8 @@ function Schritt
         [int] $nr,
         [int] $silent = 0
     )
+
+    $warteZeitFuerGimmics = 0 # Einheiten; Millisekunden, lange Gimmics * $warte...*2 : DEFAULT = 1000
     if ($nr -gt 9999)
     {
         $nr -= 9999
@@ -446,6 +630,9 @@ function Schritt
         git add --all
         git commit --message "gelöscht und hinzu"
     }
+    Write-Host "Scotty beam me up"
+    Start-Sleep -Milliseconds ($warteZeitFuerGimmics * 2)
+
     if ($nr -gt 11)
     {
         mkdir .\ordner | Out-Null
@@ -453,8 +640,59 @@ function Schritt
         git add --all
         git commit --message "Neuer Ordner"
     }
+    if ($nr -gt 14) { git tag Neuer.Ordner }
+    if ($nr -gt 18) { Make19 }
+    Write-Host "Connection to matrix.Nebuchadnezzar"
+    Start-Sleep -Milliseconds ($warteZeitFuerGimmics * 3)
+    if ($nr -gt 19)
+    {
+        git add Dokumentation
+        git add .\neu\Unterordner\readme.txt
+        git commit -m "Viel hinzu"
+        git tag viel
+    }
+    if ($nr -gt 20)
+    {
+        "A" > stage.txt
+        git add --all | Out-Null
+        git commit -m "Stage A" | Out-Null
+        "B" > stage.txt
+    }
+    if ($nr -gt 21) { git add stage.txt }
+    if ($nr -gt 22) { "C" > stage.txt }
+    if ($nr -gt 24) { git commit -m "Stage B" }
+    if ($nr -gt 25)
+    {
+        git add --all
+        git commit -m "Stage C"
+    }
+    if ($nr -gt 26)
+    {
+        $codeOriginal = "class Programm`n    {`n        public void main(string[] args)`n        {`n            // I do something...`n        }`n    }`n"
+        Set-Content -Value $codeOriginal -Path code.cs
+        git add --all
+        git commit -m "Code"
+    }
+    if ($nr -gt 27)
+    {
+        for ($versuch = 1; $versuch -le 3; $versuch++)
+        {
+            $codeVersuch = "class Programm`n    {`n        public void main(string[] args)`n        {`n            // I do something...`n            // Versuch $versuch`n        }`n    }`n"
+            Set-Content -Value $codeVersuch -Path code.cs
+            git stash save "Versuch $versuch"
+        }
+    }
 
-    <# TODO (Schritt #) Schritt nr erstellen  #>
+    if ($nr -gt 28) { git stash apply 0 }
+    if ($nr -gt 29) { git stash drop 1 }
+    if ($nr -gt 30)
+    {
+        git add -all
+        git commit -m "Versuch 3"
+        git stash clear
+    }
+
+    <# TODO __2__(Schritt #) Schritt nr erstellen  #>
     $global:schritt = $nr
     weiter
 }
@@ -465,7 +703,8 @@ function Weiter
     [Alias("w")]
     param
     (
-        $nr = -1
+        $nr = -1,
+        $anweisung = $false
     )
     if ($nr -eq -1)
     {
@@ -474,7 +713,6 @@ function Weiter
     if ($nr -lt -100000)
     {
         gelb "Git ist nun installiert. Die Powershell neu starten (als Administrator ist nicht nötig), das Tutorial-Skript neu ausführen"
-        rot "Danach mit init das Tutorial initialisieren und den Anweisungen folgen"
         return
     }
     if ($nr -lt -1000)
@@ -552,7 +790,6 @@ function Weiter
             gelb "Wenn Du zu einem bestimmten Schritt springen willst, kannst Du das mit Schritt oder kurz s."
             gelb "Danach die Schrittnummer eingeben. Da wir hier im Tutorialeinleitung 5 sind, gehe zur Einleitung Nr. 6."
             rot "s 6"
-
             break
         }
         10005
@@ -570,26 +807,64 @@ function Weiter
             gelb "Nur hilfe zeigt dir die Befehle an."
             gelb "Es gibt aber mehrere Hilfe-Themen. Das zu gibst Du hilfe ein, gefolgt von einem Space und drückst dann die Tabulatortaste um zwischen den Hilfe-Themen zu wechseln."
             gelb "Oder gebe hilfe ein, ein Space und dann Strg+Space um eine Liste der Hilfethemen zu bekommen."
-            gelb "Zeige dir einfach ein paar Hilfe-Themen an, dann gehts weiter"            break
+            grau "`"Die Hilfe beschreibt dir auch Begriffe, die in der Auswahl enthalten sind."
+            gelb "`nZeige dir einfach ein paar Hilfe-Themen an, dann gehts weiter"            
             rot "hilfe"
             rot "hilfe <Tabulatortaste><Tabulatortaste...>" 0
             rot "hilfe <Strg+Space>" 0
             rot "w" 0
+            break
         }
         10007
+        {
+            gelb "Als nächstes lernen wir die Ausgabe von langen Textausgaben von Git"
+            gelb "Mit Curcor runter/Bild runter gehst Du eine Zeile/Seite nach unten"
+            gelb "Mit Cursor hoch/Bild hoch entsprechend eine Zeile/Seite nach oben"
+            gelb "Mit q beendet du die Anzeige"
+            grau "Mit h könntest Du sogar eine Hilfe angezeigt bekommen (mit q beenden)"
+            gelb "`nScrolle/Blätter mit Cursor runter/Bild runter nach ganz unten zur ersten Datei..."
+            Read-Host -Prompt "Bereit? Drücke Return (dauert ein paar Sekunden)"
+            $path = "$([System.Environment]::GetFolderPath("USER"))\_1_2_3_4_5"
+
+            if (Test-Path $path)
+            {
+                Remove-Item $path -Recurse -Force
+            }
+            New-Item -ItemType Directory -Path $path | cd
+            git init | Out-Null
+            for ($i = 1; $i -lt 20; $i++)
+            {
+                New-Item -ItemType File -Name "File ${i}.txt" | Out-Null
+                git add "File ${i}.txt" | Out-Null
+                if ($i -eq 1)
+                {
+                    git commit -m "Super jetzt wieder mit Cursor hoch/Bild hoch nach oben. Mit q beendest Du die Anzeige (dann mit w Weiter)." | Out-Null
+                }
+                else
+                {
+                    git commit -m "Datei ${i}" | Out-Null
+                }
+            }
+            git log
+            cd..
+            Remove-Item $path -Recurse -Force
+        }
+        10008
         {
             gelb "Wir sind nun am Ende der Tutorialeinleitung. Ein Befehl gibt es noch: init"
             gelb "Dieser initialisiert das Tutorial und beendet somit auch die Einleitung."
             gelb "Danach kannst Du mit den besagten Befehlen arbeiten. Am besten fängst Du dann mit w an und startest damit Schritt 1 des Tutorials."
             rot "init"
             rot "w"
+            break
         }
-        10008
+        10009
         {
             gelb "Die Tutorialeinleitung ist schon zuende. Gehe zurück"
             rot "z"
+            break
         }
-        10009
+        10010
         {
             gelb "Hey, was willst Du hier?"
             gelb "Ich warte jetzt 15 Sekunden, dann initialisiere ich das Tutorial, fange dann mit w beim Schritt 1 an."
@@ -604,6 +879,7 @@ function Weiter
             init
             return
         }
+        # KAPITEL - Start
         0
         {
             rot "Starte das Tutorial mit w"
@@ -617,11 +893,13 @@ function Weiter
             rot "git init"
             break 
         }
+        # KAPITEL: Erstes Commit
         2
         {
-            gelb "Als erstes müssen alle Dateien als #com in das #rep aufgenommen werden"
-            grau "Der Befehl add fügt Dateien dem #com hinzu. Entwerder einzelln (hier natürlich auch Dateien, die gelöscht wurden)"
+            gelb "Als erstes müssen alle Dateien als #com in das #rep (genauer in dem #sta) aufgenommen werden"
+            grau "Der Befehl add fügt Dateien dem nächsten #com hinzu. Entwerder einzelln (hier natürlich auch Dateien, die gelöscht wurden angeben)"
             grau "oder alle auf einmal mit git add --all"
+            gelb "git add aktualisiert den #sta, dazu kommen wir weiter unten."
             rot "git add --all" 
             break 
         }
@@ -634,9 +912,9 @@ function Weiter
         }
         4
         {
-            gelb "Nun schreiben wir in die Datei 'leer.txt' eine Zeile mit 'Änderung' und speichern diese ab."
-            Read-Host "Bereit? (drücke Return)"
-            Invoke-Item leer.txt
+            gelb "Nun schreiben wir in die Datei 'leer.txt' die folgende Zeile und speichern ab."
+            grün "Änderung"
+            Edit "leer.txt" 1
             break 
         }
         5
@@ -648,7 +926,6 @@ function Weiter
             rot "git status"
             rot "git add leer.txt" 0
             rot "git commit --message `"kleine Änderung`"" 0
-
             break 
         }
         6
@@ -663,6 +940,7 @@ function Weiter
             rot "git commit --message `"gelöscht und hinzu`"" 0
             break
         }
+        # KAPITEL: Unterschiede anzeigen lassen
         7
         {
             gelb "Nun schauen wir uns die Unterschiede zu den #coms an."
@@ -697,8 +975,12 @@ function Weiter
             gelb "Einfach den git diff Befehle von zuvor mit einem --stat nach 'diff' erneut ausführen."
             grau "Hierzu die Befehle mit Cursor hoch suchen, ändern und mit return ausführen)"
             grau "z.B. git diff --stat 5304232b1^!"
+            rot "git diff --stat bf7ec81f06^!"
+            rot "git diff --statt 941364c bf7ec81f^!" 0
+            grau "Die Hash hier sind natürlich Beispiele."
             break
         }
+        # KAPITEL: Details zu Commits
         10
         {
             gelb "Um Informationen über ein #com zu erhalten verwendet man git show."
@@ -730,13 +1012,277 @@ function Weiter
             grau "Und auch wichtig: Groß-/Kleinschreibung spielt hier eine Rolle!!!"
             break
         }
+        13
+        {
+            gelb "Gerade git log führt zu langen, teils unübersichtlichen Ausgaben."
+            gelb "Dafür gibt es Ausgabeformate die entweder alles kürzer machen oder andere Informationen anzeigen."
+            gelb "Probiere einfach mal aus:"
+            rot "git log --oneline"
+            grau "Achtung: oneline (eine Zeile) nicht online!!!"
+            rot "git log --stat"
+            rot "git log --shortstat"
+            rot "git log --graph"
+            grau "Werden wir später nochmal ansehen wenn wir gemerged haben)"
+            break
+        }
+        # KAPITEL: Tags und Commits
+        14
+        {
+            gelb "Nun ist es umständlich die #coms immer mit dem Hash anzusprechen."
+            gelb "Viel einfacher wäre es, wenn #coms einen Namen haben"
+            gelb "Dies kann man mit sogenannten Tags"
+            gelb "Ein #com kann beliebig viele Tags erhalten (ist auch wichtig, damit unterschiedliche Benutzer ihre Tagsnamen vergeben können)"
+            gelb "`nWir erstellen für den aktuellen #com ein Tag."
+            rot "git tag Neuer.Ordner"
+            grau "`nEin Tagname muss ein `"Wort`" sein. Bindestriche, Unterstriche und Punkte sind erlaubt."
+            grau "Also git tag Neuer_Ordner, git tag Neuer-Ordner wäre auch ok."
+            rot "git log --oneline"
+            break
+        }
+        15
+        {
+            gelb "Nun lernen wir wie man #coms ansprechen kann. Bisher haben wir ja immer den Hash (oder den ersten Teil davon) genutzt."
+            gelb "Da #coms eines der wichtigsten Elemente von git sind, macht es Sinn sie möglichst einfach benennen zu können."
+            gelb "Zum einen geht es mit dem neuen Tag `"Neuer.Ordner`""
+            rot "git show --stat Neuer.Ordner"
+            break
+        }
+        16
+        {
+            gelb "Es gibt aber auch schon fertige Namen und Branches die man nehmen kann."
+            gelb "Bei git log --online steht beim ersten #com"
+            weiss "xxxxxxx (HEAD -> master, tag: Neuer.Ordner) Neuer ordner"
+            grau "xxxxxxx      : ist der Hash"
+            grau "HEAD         : ist immer der aktuelle #com"
+            grau "master       : ist der Branch (dazu kommen wir später)"
+            grau "Neuer.Ordner : der Tag"
+            grau "Neuer Ordner : ist die Message, die wir beim git commit angegeben hatten"
+            rot "git show --stat HEAD"
+            rot "git show --stat master" 0
+            rot "git show --stat Neuer.Ordner" 0
+            grau "`nAnsprechen über die Message geht nicht!"
+            # TODO ?? Ansprechen eines Commits über die Message - wenn es doch geht
+            break
+        }
+        17
+        {
+            gelb "Zusätzlich kann man eine Art Steuercode an den Namen hängen."
+            gelb "Einen kennen wir schon : ^! (immer der vorherige #com, ist aber eher für diff wichtig, da hier immer 2 #coms verglichen werden.)"
+            gelb "~  : Der Parent (vorherige) #com. Kann auch kombiniert (~~~) werden."
+            gelb "~2 : 2 Parents (oder auch ~3, ~4, ...). ~2 entspricht also ~~."
+            rot "git show --stat HEAD~"
+            rot "git show --stat HEAD~~~"
+            rot "git show --stat HEAD~3"
+            grau "Die letzten beiden zeigen den Start #com"
+            rot ""
+            break
+        }
+        18
+        {
+            gelb "Auch mehere #coms auf einmal sind möglich."
+            rot "git show --stat HEAD HEAD~ HEAD~2"
+            grau "Also von aktuellen #com bis zu 2 #coms davor."
+            break
+        }
+        19
+        {
+            Make19
+            gelb "Nach längerer Zeit sind in unserem #rep ein paar Dateien und Ordner entstanden."
+            grau "Ich habe diese mal erstellt"
+            gelb "Nun wollen wir nur die Dokumentation und die readme.txt in neu\Unterordner in das nächste #com übernehmen."
+            grau "`nBeim add Befehl sind Jokerzeichen wie ? und * möglich."
+            grau "Bei angaben von Verzeichnisse sind diese immer Recursive (d.h. alle Unterordner darin kommen auch ins #com)"
+            grau "Der Punkt bezeichnet das aktuelle Verzeichnis (git add . -> fügt das aktuelle und alle darin enthaltenen Verzeichnisse ins #com hinzu)"
+            rot "dir"
+            rot "git add Dokumentation" 0
+            rot "git add .\neu\Unterordner\readme.txt" 0
+            grau "Mit der Tab Taste kannst Du die Ordner auch vervollständigen. Mit Strg+Space auch anzeigen."
+            rot "git commit -m `"Viel hinzu`"" 0
+            rot "git tag viel" 0
+            rot "git log --oneline" 0
+            rot "git status"
+            grau "Wir sehen, das nur das angegebene im Commit ist."
+            break
+        }
+        # TODO >>> GEPRÜFT BIS HIER HIN *v*v*v*v*v*v*v*v*v*v*v*v*v* <<<
 
-        <# TODO (Weiter) Nächster Schritt #>
+        # KAPITEL: Stage-Bereich
+        20
+        {
+            gelb "Nun schauen wir uns mal den #sta genauer an."
+            grau "Der #sta wird in der Hilfe genauer beschrieben."
+            gelb "Aktuell entspricht der #com dem #sta und der #sta dem #work."
+            gelb "Wir prüfen das, ändern was und fügen es dem #sta hinzu."
+            grau "Wir betrachten uns diesmal die Datei stage.txt. Diese habe ich erstellt und ein `"A`" darin gespeichert. Ein Commit mit allen Änderung habe ich auch bereits gemacht."
+            if (-not ($anweisung))
+            {
+                "A" > stage.txt
+                git add --all | Out-Null
+                git commit -m "Stage A" | Out-Null
+            }
+            gelb "Nun ändern wir den Inhalt von stage.txt auf ein `"B`" und schauen uns den Status an."
+            rot "git status"
+            rot "`"B`" > stage.txt" 0
+            rot "git status" 0
+            grau "`nDie Datei wurde als geändert erkannt, ist aber nicht im #sta."
+            break
+        }
+        21
+        {
+            gelb "Nun fügen wie diese Datei dem #sta hinzu. Danach schauen wird uns wieder den Status an."
+            rot "git add stage.txt"
+            rot "git status" 0
+            grau "`nNun wird die Datei grün angezeigt. Sie ist im #sta."
+            break
+        }
+        22
+        {
+            gelb "Das was jetzt im Stage ist (stage.txt: `"B`") würde in den #com übertragen."
+            gelb "Aber wird ändern jetzt erneut die stage.txt und schreiben ein `"C`" hinein"
+            grau "Vorher mal den Unterschied anzeigen."
+            rot "git diff"
+            grau "~Kein Unterschied, da der #sta dem #work entspricht."
+            rot "´C´ > stage.txt"
+            rot "git status"
+            grau "~Die stage.txt taucht nun 2 mal auf."
+            grau "Einmal grün, das ist die ´B´ Version."
+            grau "Einmal rot, das ist die ´C´ Version."
+            break
+        }
+        23
+        {
+            gelb "Wird schauen uns mal die Unterschiede mit git diff an."
+            rot "git diff"
+            grau "~Der Unterschied zwischen #work (´+ C´) und dem #sta (´- B´)."
+            rot "git diff --staged"
+            grau "~Der Unterschied zwischen dem #sta (´+ B´) und dem HEAD-#com (´- A´)."
+            break
+        }
+        24
+        {
+            gelb "Wenn wir jetzt ein #com machen, wird nicht die stage.txt mit dem ´C´ in dem #com gespeichert."
+            gelb "Nein, gelangt wird nur immer der aktuelle #sta in den #com."
+            rot "git commit -m ´Stage B´"
+            rot "git status" 0
+            rot "git diff" 0
+            grau "~Wir sehen, die letzte Änderung (das ´C´) wird noch als nicht im #sta angezeigt."
+            grau "Zusätzlich sehen wir den Unterschied zum #work (´+ C´) und zum #sta (was ja jetzt auch der HEAD-#com ist) (´- B´)."
+            break
+        }
+        25 
+        {
+            gelb "Erst wenn wir ein neues git add --all (oder git add stage.txt) und ein #com machen, ist alles wieder identisch."
+            rot "git add --all"
+            rot "git commit -m ´Stage C´" 0
+            rot "git status" 0
+            grau "~Nun ist der Inhalt des #hcom, des #stas und des #work vollkommen identisch."
+            break
+        }
+        # KAPITEL: Stashing - Änderungn zwischenspeichern
+        26
+        {
+            if (-not ($anweisung))
+            {
+                $codeOriginal = "class Programm`n    {`n        public void main(string[] args)`n        {`n            // I do something...`n        }`n    }`n"
+                Set-Content -Value $codeOriginal -Path code.cs
+                git add --all
+                git commit -m "Code"
+            }
+            gelb "Angenommen wir haben einen Quellcode. Wir möchten jetzt Änderungen an diesem Code durchführen."
+            gelb "Wir versuchen 3 unterschiedliche Codes aus, testen also etwas herum."
+            gelb "Am Ende wollten wir den Originalzustand oder einen der getesteten Codes verwenden."
+            grau "Nach jeder Änderung ein #com machen wäre umständlich und die #coms werden unübersichtlich."
+            gelb "Hilf hilft git stash. Die Datei mit dem Code ist bereits erstellt (code.cs) und im #com ´Code´."
+            gelb "Wir sehen uns den Code an."
+            rot "Get-Content code.cs"
+            break
+        }
+        27
+        {
+            gelb "Nun machen wir die erste Änderung und schreiben unter der Kommentarzeile"
+            rot "edit code.cs"
+            grün "// Versuch 1"
+            grau "Dies entspricht in der Praxis dann ein Quellcode aus meheren Zeilen den wir testen würden.~edit ist KEIN PowerShell Befehl, sondern Bestandteil dieses Tutorials!"
+            gelb "diesen Speichern wird in einem stash und setzen die Datei code.cs auf den Originalzustand zurück."
+            rot "git stash save ´Versuch 1´"
+            grau "´Versuch 1´ ist kein Name sondern nur eine Notiz"
+            gelb "~Anschließend ändern wir die Kommentarzeile auf folgende, speichern und erstellen jeweils ein stash dafür."
+            rot "edit code.cs"
+            grün "// Versuch 2"
+            rot "git stash save ´Versuch 2´" 0
+            rot "edit code.cs"
+            grün "// Versuch 3"
+            rot "git stash save ´Versuch 3´" 0
+            break
+        }
+        28
+        {
+            gelb "Schauen wir uns zuerst die gespeicherten Stashes an. Und laden Versuch 2 in die Datei code.cs."
+            rot "git stash list"
+            rot "git stash apply 1" 0
+            grau "~1 steht für stash@{1}, also Versuch 2"
+            rot "Get-Content code.cs"
+            grau "~Wir sehen, es steht nun // Versuch 2 im Quellcode"
+            gelb "Nein, doch lieber Versuch 3..."
+            rot "git restore code.cs"
+            rot "git stash apply 0" 0
+            break
+        }
+        29
+        {
+            gelb "Den Stash Nr. 1 (Versuch 2) wollen wir aus der Stashliste löschen."
+            rot "git stash list" 
+            rot "git stash drop 1" 0
+            rot "git stash list" 0
+            grau "~Wir sehen, Versuch 2 ist gelöscht."
+            break
+        }
+        30
+        {
+            gelb "Diese Version möchten wir nun in den #com. Dies geschieht wie gewohnt."
+            rot "git add --all"
+            rot "git commit -m ´Versuch 3´" 0
+            gelb "~Wir prüfen die #coms und die Stashes"
+            rot "git log --oneline"
+            rot "git stash list" 0
+            gelb "~Die Stash sind immer noch da, wir lös::::q
+            n alle."
+            rot "git stash clear"
+            break
+        }
+        31
+        {
+            if (-not ($anweisung))
+            {
+                for ($versuch = 4; $versuch -le 7; $versuch++)
+                {
+                    $codeVersuch = "class Programm`r    {`r        public void main(string[] args)`r        {`r            // I do something...`r            // Versuch $versuch`r        }`r    }`r"
+                    Set-Content -Value $codeVersuch -Path code.cs
+                    git stash save "Versuch $versuch" | Out-Null
+                }
+            }
+            gelb "Wir hatte noch ein paar Versuche unternommen. Im Stash sind nun Versuch 4 bis 7."
+            gelb "Es gibt noch folgende Befehle für git stash:"
+            gelb "git stash apply               : ohne Nummer wird immer Nr. 0 (erster Eintrag von git stash list) genutzt"
+            gelb "git stash pop                 : auch hier ohne Nummer die Nr. 0. Jedoch wird dieser stash nach dem Pop gelöscht."
+            gelb "git stash show                : ohne Nummer die Nr.0. Zeigt Informationen zum angegeben (oder 0) Stash an."
+            rot "git stash list"
+            rot "git stash pop" 0
+            rot "git stash list" 0
+            rot "Get-Content code.cs" 0
+            grau "~Wiederhole ein paar mal die folgenden Befehle (bis Stashliste leer)"
+            rot "git restore code.cs"
+            rot "git stash pop" 0
+            rot "git stash list" 0
+            rot "Get-Content code.cs" 0
+            grau "~Wird gehen also die Stashed Rückwärts zurück."
+        }
+        <# TODO __1__(Weiter) Nächster Schritt #>
     }
     
     $nr++
     $global:schritt = $nr
 }
 
-# init
 
+# init
