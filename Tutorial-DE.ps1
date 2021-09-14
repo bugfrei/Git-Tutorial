@@ -63,7 +63,7 @@ function Edit($file, $ask = 0)
 function rep([string] $t)
 {
     . L:\GIT\GitTutorial\Tutorial-DE.ps1
-    return ([string] $t).Replace("#rep", "Repository").Replace("#com", "Commit").Replace("#sta", "Stage-Bereich").Replace("#work", "Workspace").Replace("#wor", "Workspace").Replace("~", "`n").Replace("´", "`"").Replace("#hcom", "HEAD-Commit")
+    return ([string] $t).replace("#rep", "Repository").Replace("#com", "Commit").Replace("#sta", "Stage-Bereich").Replace("#work", "Workspace").Replace("#wor", "Workspace").Replace("~", "`n").Replace("´", "`"").Replace("#hcom", "HEAD-Commit").Replace("#bra", "Bransh").Replace("#bru", "Bransh")
 }
 Function Init
 {
@@ -83,8 +83,8 @@ Function Init
     Set-Location $dir
 
 
-    mkdir Code1 | Out-Null
-    Set-Location Code1
+    mkdir user1 | Out-Null
+    Set-Location user1
 
     MakeContentFile "text.txt"
     MakeContentFile "datei1.txt"
@@ -214,7 +214,7 @@ function Info
     [CmdletBinding()]
     param(
     )
-    $dir = "$([System.Environment]::GetFolderPath("user"))\GIT_LESSON1\Code1\Hilfe.txt"
+    $dir = "$([System.Environment]::GetFolderPath("user"))\GIT_LESSON1\user1\Hilfe.txt"
     Get-Content $dir | more
 }
 
@@ -458,11 +458,15 @@ function Hilfe
     param(
         [ValidateSet("Befehle", "^", "Kopieren", 
             "Lange Textausgaben", "Textfarben",
-            "Commit", "Repositoy", "Tag")]
+            "Commit", "Repository", "Branch", "Merge", "Tag",
+            "Hash", "Workspace",
+            "Github", "Bitbucket")]
         $Was = "Befehle"
     )
 
-    Write-Host ""
+    clear
+    Write-Host "Beschreibung für $Was`n" -ForegroundColor Yellow
+    
     if ($Was -eq "Befehle")
     {
         Write-Host "Es gibt folgende Befehle (Groß/Kein-Schreibung spielt keine Rolle):" -ForegroundColor Cyan
@@ -502,20 +506,98 @@ Texte in Rot stellt die Anweisung oder die Befehlszeile dar, die exakt so eingeg
     }
     elseif ($Was -eq "Repository")
     {
-        # TODO HILFE: Repository beschreiben
+        weiss "Ein #rep ist eine Sammlung von 2 bis 3 Bereichen."
+        weiss "Die #coms, die unterschiedliche Zustände/Version der Dateien/Ordner entsprechend."
+        weiss "Die #stas, die enthalten was im nächsten #com geschrieben werden soll."
+        weiss "Und, abgesehen von Git Hubs wie z.B. Github oder Bitbucket, das Workspace. Das ist der Bereich, in dem der Benutzer arbeitet."
+        weiss "In einem Git #rep können unterschiedliche Aktionen durchgeführt werden. Allesammt mit dem Befehl git."
+        weiss "Wobei es eine Dezentrale Versionsverwaltung ist, d.h. es ist kein Internet nötig (außer man möchste zum Git Hoster pushen (=übertragen))"
+        grau "Ein #rep erkennt man an dem Ordner .git im Workspace. In diesem Ordner befinden sich die #stas, #coms und alles was dazu gehört bzw. dafür gebraucht wird."
+        gelb "Man unterscheidet zwischen folgenden #rep Typen:"
+        write-Host "Blessed #rep:" -ForegroundColor Black -BackgroundColor White
+        weiss "Hier werden offizielle Releases erstellt. D.h. nur fertige, auslieferbare Versionen."
+        Write-Host "Shared #rep:"  -ForegroundColor Black -BackgroundColor White
+        weiss "Dient zum Austausch zwischen den Entwicklern. Es kann auch mehrere Shared Repositories geben, je nach Größe des Projektes, anzahl der Entwickler oder Orte an denen Entwickelt wird."
+        Write-Host "Workflow #rep:"  -ForegroundColor Black -BackgroundColor White
+        weiss "Hier werden Versionen veröffentlicht, die einen bestimmten Status erreicht haben. z.B. abgeschlossene Reviews ode Tests."
+        Write-Host "Fork #rep:"  -ForegroundColor Black -BackgroundColor White
+        weiss "Wird hauptsächlich für große Umbauten von Projekten genutzt. Also ein Ausbruch aus der normalen Entwicklungslinie oder für experimentielle Entwicklungen die vielleicht nie in die normale Entwicklungslinie einfließen sollen."
+        Write-Host "Lokales #rep:"  -ForegroundColor Red -BackgroundColor White
+        weiss "Hier arbeiter der Entwickler. Dieses befindet sich auf seinem Rechner und wird mit den anderen Repositories abgeglichen (gepushed)."
+        rot "    In solch einem #rep arbeiten wir hier im Tutorial."
+        rot "    Andere #rep Typen simuliere werden im Tutorial mit entsprechenden Ordnern (user1, user2, share) simuliert."
     }
     elseif ($was -eq "Commit")
     {
-        # TODO HILFE: Commit beschreiben
+        weiss "Ein #com entspricht immer eine Version und beinhaltet technisch gesehen alles was im Workspace ist. D.h. alle Dateien, alle Ordner (wenn Sie Datein beinhalten!) mit dem Inhalt eines Bestimmten Moments."
+        weiss "#coms sind Hauptbestandteil eines #rep."
+        weiss "Ein #com geht immer in einen #bra."
+        weiss "Bei meheren Entwicklern kann es mehrere #coms unterschiedlicher Versionen zur gleichen Zeit geben. Dies kann man mit den #bra verwalten."
+        weiss "In einem Master-#bra ist immer der entgültige #com."
     }
-    elseif ($Was -eq "Tag")
+    elseif ($Was -eq "Branch" -or ($Was -eq "Merge"))
     {
-        # TODO HILFE: Tag beschreiben
+        weiss "Ein Branch ist eine Art Name für einen Bereich im #rep. Damit können unterschiedliche Entwickler gleichzeitig arbeiten ohne sich in die Quere zu kommen."
+        weiss "Es gibt immer einen Master-#bra in dem der entgültige #com gespeichert wird."
+        weiss "Mehere #braes mit unterschiedlichen Änderungen werden mit einem Merge zu einen Master-#bra 'zusammengefügt'."
+
+    }
+    elseif ($Was -eq "Tag" -or ($Was -eq "Hash"))
+    {
+        weiss "Ein Tag ist eigentlich nur ein Name für ein #com."
+        weiss "Ohne einem Tag kann man einen bestimmten #com nur durch seinen Hash-Wert ansprechend."
+        weiss "Dies ist umständlich da die Hashwerte durch den Inhalt eines #coms berechnet und keinen für den Menschen logischen Aufbau haben."
+        weiss "Somit kann man, gerade für wichtige #coms, einen Tag vergeben und den #com damit mit diesen 'Namen' ansprechen."
+        weiss "Jeder Entwickler kann für einen #com beliebig viele Tags vergeben. Ein #com kann also beliebig viele Namen haben. Dies ist wichtig, da jeder Entwickler vielleicht seinen eigenen Namen vergibt und sich merkt."
     }
     elseif ($was -eq "Stage-Bereich")
     {
-        # TODO HILFE: Stage-Bereich beschreiben
-        
+        weiss "Ein #sta ist ein Zwischenspeicher zwischen dem was im aktuellen (HEAD) #com ist und was in den nächsten #com soll."
+        weiss "1. Nach einem #com sind diese #com und der #sta identisch"
+        weiss "2. Ändert man nun etwas ist der #com identisch mit dem #sta, der #sta jedoch nicht mit dem Workspace."
+        weiss "3. Mit dem Befehl 'git add .' wird nun alles was sich geändert hat in den #sta geschrieben."
+        weiss "Nun ist der #com nicht mehr identisch zum #sta. Dafür der #sta mit dem Workspace."
+        weiss "4. Ändert man nun weiteres im Workspace sind alle (#com, #sta und Workspace) mit keinem mehr identisch."
+        weiss "5. Führt man nun einem #com aus, so ist der #com wieder mit dem #sta Identisch (der #sta wird in den #com geschrieben)."
+        weiss "Durch die Änderung bei 4. ist der #sta aber nicht mit dem Workspace identisch."
+        weiss "~Ein 'git add .' gefolgt von einem #com sorgt dafür das wieder alles Identisch ist (1.)"
+    }
+    elseif ($Was -eq "Workspace")
+    {
+        weiss "Ein Workspace ist das, was der Entwickler als sein Arbeitsbereich ansieht. Also die Ordner und Dateien mit bzw. in denen er arbeitet."
+        weiss "Grundsätzlich ist alles auf einem Computer ein Workspace, aber nur mit "git init" wird aus einem Workspace (Ordner) ein #rep."
+    }
+    elseif ($was -eq "Github")
+    {
+        Write-Host "Github ist ein Git Hoster für Repositories. Hier können private und öffentliche Repositories erstellt und verwaltet werden."
+        Rot "Bei Github findest Du die URL zum #rep im #rep nach Klicken auf Code (oben/rechts)."
+        $ein = fragenmulti -frage "Soll Github-Webseite geöffnet werden? (j oder c in Chrome / e in Edge / N)" -neinZeichen n -defaultZeichen n -erlaubteZeichen jce
+        if ($ein -eq "j" -or ($ein -eq "c"))
+        {
+            Start-Process "chrome.exe" -ArgumentList "https://github.com/"
+        }
+        elseif ($ein -eq "e")
+        {
+            Start-Process "msedge.exe" -ArgumentList "https://github.com/"
+        }
+    }
+    elseif ($was -eq "Bitbucket")
+    {
+        Write-Host "Bitbucket ist ein Git Hoster für Repositories. Hier können private und öffentliche Repositories erstellt und verwaltet werden."
+        Rot "Bei Bitbucket findest Du die URL zum #rep im #rep nach Klicken auf Clone (oben/rechts)."
+        $ein = fragenmulti -frage "Soll Bitbucket-Webseite geöffnet werden? (j oder c in Chrome / e in Edge / N)" -neinZeichen n -defaultZeichen n -erlaubteZeichen jce
+        if ($ein -eq "j" -or ($ein -eq "c"))
+        {
+            Start-Process "chrome.exe" -ArgumentList "https://bitbucket.org/"
+        }
+        elseif ($ein -eq "e")
+        {
+            Start-Process "msedge.exe" -ArgumentList "https://bitbucket.org/"
+        }
+    }
+    else
+    {
+        rot "Zu diesem Thema gibt es leider noch keine Hilfe!"
     }
 
     # TODO HILFE <--------------
@@ -538,6 +620,40 @@ function Make19
 
 }
 
+function fragenmulti()
+{
+    [CmdletBinding()]
+    param(
+        [string] $frage,
+        [ValidateLength(0, 1)]
+        [string]$neinZeichen = "|",
+        [ValidateLength(1, 1)]
+        [string] $defaultZeichen = "n",
+        [ValidateLength(1, 99)]
+        [string] $erlaubteZeichen
+    )
+    if ($erlaubteZeichen.ToLower().Contains($neinZeichen.ToLower()))
+    {
+        throw "Das neinZeichen darf NICHT in den erlaubtenZeichen enthalten sein!"
+    }
+
+    $ein = Read-Host -Prompt $frage
+    if ($ein -eq "")
+    {
+        $ein = $defaultSymbol
+    }
+    if ($ein -eq $neinSymbol)
+    {
+        return $false
+    }
+
+    if (-not ($erlaubteZeichen.ToLower().Contains($ein.ToLower())))
+    {
+        return $false
+    }
+    return $ein
+
+}
 function fragen($frage, [switch] $jaDefault)
 {
     $def = " (j/N)"
@@ -691,6 +807,23 @@ function Schritt
         git commit -m "Versuch 3"
         git stash clear
     }
+    if ($nr -gt 31)
+    {
+        for ($versuch = 4; $versuch -le 7; $versuch++)
+        {
+            $codeVersuch = "class Programm`r    {`r        public void main(string[] args)`r        {`r            // I do something...`r            // Versuch $versuch`r        }`r    }`r"
+            Set-Content -Value $codeVersuch -Path code.cs
+            git stash save "Versuch $versuch" | Out-Null
+        }
+        git stash pop
+        for ($versuch = 4; $versuch -le 6; $versuch++)
+        {
+            git restore code.cs
+            git stash pop
+        }
+    }
+    if ($nr -gt 32) { git restore . }
+    
 
     <# TODO __2__(Schritt #) Schritt nr erstellen  #>
     $global:schritt = $nr
@@ -887,7 +1020,7 @@ function Weiter
         }
         1
         {
-            gelb "Git für $dir\Code1 Initialisieren (#rep erstellen)" 
+            gelb "Git für $dir\user1 Initialisieren (#rep erstellen)" 
             grau "Der Befehl 'init' erstellt ein leeres #rep im aktuellen Ordner" 
             Write-Host "Und denk daran, mit w (oder weiter) geht es weiter" -ForegroundColor Cyan
             rot "git init"
@@ -1104,8 +1237,6 @@ function Weiter
             grau "Wir sehen, das nur das angegebene im Commit ist."
             break
         }
-        # TODO >>> GEPRÜFT BIS HIER HIN *v*v*v*v*v*v*v*v*v*v*v*v*v* <<<
-
         # KAPITEL: Stage-Bereich
         20
         {
@@ -1276,6 +1407,29 @@ function Weiter
             rot "git stash list" 0
             rot "Get-Content code.cs" 0
             grau "~Wird gehen also die Stashed Rückwärts zurück."
+            break
+        }
+        32
+        {
+            gelb "Zuerst löschen wird die überbleibsel von den letzten Stashes."
+            rot "git restore ."
+            grau "Also alles zurücksetzten zum letzten #com."
+            git stash pop
+            break
+        }
+        # TODO >>> GEPRÜFT BIS HIER HIN *v*v*v*v*v*v*v*v*v*v*v*v*v* <<<
+        # KAPITEL: Branches
+        33
+        {
+            gelb "#braes sind Nebenläufige #coms und werden für die parallele Entwicklung benötigt."
+            gelb "Einen weiteren Entwickler simulieren wir durch eine Klon des #rep im Ordner ..\user2."
+            gelb "Wir clonen also das aktuelle #rep nach ..\user2"
+            rot "git clone . ..\user2"
+            rot "dir .."
+            grau "Also Klone das 'Aktuelle' (.) #rep nach 'Ein Ordner Zurück\user2' (..\user2)."
+            grau "Nach dem dir sehen wir, das wir 2 #rep haben. Wir stellen und vor user1 und user2 nutzen unterschiedliche Rechner."
+            gelb "~Zusätzlich brauchen wir ein #rep für den Datenaustausch. Wir könnten hier Github oder Bitbucket nutzen."
+            break
         }
         <# TODO __1__(Weiter) Nächster Schritt #>
     }
