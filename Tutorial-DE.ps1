@@ -62,9 +62,94 @@ function Edit($file, $ask = 0)
 }
 function rep([string] $t)
 {
-    . L:\GIT\GitTutorial\Tutorial-DE.ps1
-    return ([string] $t).replace("#rep", "Repository").Replace("#com", "Commit").Replace("#sta", "Stage-Bereich").Replace("#work", "Workspace").Replace("#wor", "Workspace").Replace("~", "`n").Replace("´", "`"").Replace("#hcom", "HEAD-Commit").Replace("#bra", "Bransh").Replace("#bru", "Bransh")
+    return ([string] $t).replace("#rep", "Repository").Replace("#com", "Commit").Replace("#sta", "Stage-Bereich").Replace("#work", "Workspace").Replace("#wor", "Workspace").Replace("~", "`n").Replace("´", "`"").Replace("#hcom", "HEAD-Commit").Replace("#bra", "Bransh").Replace("#bru", "Bransh").Replace("#reps", "Repositories")
 }
+
+function CodeCSExt()
+{
+    $neuTeil = @("        // Programmcode",
+        "        // Nochmehr Code...",
+        "  // Hier ist der Bug - Lösche diese Zeile und speichere ab (vim: zur Zeile gehen dann dd:wq<Return> drücken)",
+        "        // Wieder richtige Code")
+    $altTeil = Get-Content code.cs
+    $erg = Insert-Array -SourceArray $altTeil -InsertArray $neuTeil -Zeile 5
+    Set-Content -Path code.cs -Value $erg
+}
+function CodeCSBugdel()
+{
+    $altTeil = Get-Content code.cs
+    $erg = LineRemove-Array -SourceArray $altTeil -Zeile 8 -AnzahlZeilen 1
+    Set-Content -Path code.cs -Value $erg
+}
+function Insert-Array
+{
+    param(
+        $SourceArray,
+        $InsertArray,
+        [int] $Zeile
+    )
+
+    $neu = @()
+    for ($i = 0; $i -lt $Zeile; $i++)
+    {
+        $neu += $SourceArray[$i]
+    }
+    foreach ($ins in $InsertArray)
+    {
+        $neu += $ins
+    }
+    for ($i = $Zeile; $i -lt $SourceArray.Length; $i++)
+    {
+        $neu += $SourceArray[$i]
+    }
+
+    $neu
+}
+
+function LineRemove-Array
+{
+    param(
+        $SourceArray,
+        [int] $Zeile,
+        [int] $AnzahlZeilen
+    )
+
+    $neu = @()
+    for ($i = 0; $i -lt $Zeile - 1; $i++)
+    {
+        $neu += $SourceArray[$i]
+    }
+    for ($i = $Zeile + $AnzahlZeilen - 1; $i -lt $SourceArray.Length; $i++)
+    {
+        $neu += $SourceArray[$i]
+    }
+
+    $neu
+}
+
+function InitKapitel2
+{
+    [CmdletBinding()]
+    param (
+    )
+    if (-not ($Global:MainInit))
+    {
+        init -silent 1
+    }
+    $dir = "$([System.Environment]::GetFolderPath("user"))\GIT_LESSON1"
+    Set-Location c:\
+    if (Test-Path $dir)
+    {
+        Remove-Item $dir -Recurse -Force
+    }
+    mkdir $dir | Out-Null
+    Set-Location $dir
+
+
+    mkdir user1 | Out-Null
+    Set-Location user1
+}
+
 Function Init
 {
     [CmdletBinding()]
@@ -72,6 +157,8 @@ Function Init
         $silent = 0
     )
     $PSDefaultParameterValues['*:Encoding'] = 'utf8'
+
+    $Global:MainInit = $True
 
     $dir = "$([System.Environment]::GetFolderPath("user"))\GIT_LESSON1"
     Set-Location c:\
@@ -111,16 +198,17 @@ Weiter (oder w)    : Springt zum naechsten Schritt des Tutorials
 Anweisung (oder a) : Zeigt nochmal die Anweisung des aktuellen Schrittes
 Nochmal (oder n)   : Fuehrt den aktuellen Schritt erneut aus (Achtung: Tutorial wird dabei zurueckgesetzt!)
 Zurueck (oder z)   : Springt ein Schritt zurueck (Achtung: Tutorial wird dabei zurueckgesetzt!)
-Schritt <nr>       : Springt zum angegeben Schritt (z.B. Schritt 3 oder s 3)
+Schritt <nr> <k>   : Springt zum angegeben Schritt <nr> des Kapitels <k> (z.B. Schritt 3 1 oder s 3 1)
+                     Ohne Angabe des Kapitels (s 10) wird innerhalb des aktuellen Kapitel gesprungen.
 Inhalt             : Zeigt eine Kapiteluebersicht mit der Moeglichkeit ein Kapitel zu waehlen
 Init               : Setzt das Tutorial zurueck. Danach faengt man mit w oder weiter bei Schritt 1 an
 Hilfe (oder help)  : Liste die Befehle auf (dieser Text). Mit 'Hilfe <Strg+Space> kann angegeben werden, über was man Hilfe möchte.
 Info               : Diesen Text
-Install            : Informationen zur Installation von git"
+Install            : Informationen zur Installation von git
+Install-tools      : Instalation von Tools (Editoren, Merge-Tools)"
 
     New-Item -ItemType File -Name ".\hilfe.txt"  | Out-Null
     Set-Content Hilfe.txt -Value $hilfe -Encoding utf8
-
 
     New-Item -ItemType File -Name "leer.txt" | Out-Null
     if ($silent -eq 0)
@@ -191,6 +279,8 @@ Install            : Informationen zur Installation von git"
             {
                 $Global:Editor = ""
             }
+
+            git config --global core.editor "$Global:Editor" --replace-all
         }
 
         info 
@@ -205,6 +295,28 @@ Install            : Informationen zur Installation von git"
 
         rot "`nGebe nun w ein und drücke return."
         rede "Gebe nun w ein und drücke return."
+    }
+    else
+    {
+        if (-not ($Global:Editor))
+        {
+            if (HasVIM)
+            {
+                $Global:Editor = "vim"
+            }
+            elseif (HasCode)
+            {
+                $Global:Editor = "code"
+            }
+            else
+            {
+                $Global:Editor = "notepad"
+            }
+        }
+        if (-not ($global:sprache))
+        {
+            $global:sprache = $false
+        }
     }
     $global:schritt = 1
 }
@@ -255,7 +367,7 @@ class Kapitel
     [void] Start()
     {
         Write-Host "Gehe zu $($this.bezeichnung)"
-        Schritt $this.schritt 1
+        Schritt $this.schritt -silent 1
     }
 }
 
@@ -310,11 +422,165 @@ function config
     $em = $un.Replace(" ", ".")
     rot "git config --global user.name `"$un`""
     rot "git config --global user.email `"${em}@gmail.com`"" 0
-    rot "git config --global core.editor code" 0
+    $editor = $Global:Editor
+    if ($editor -eq $null -or ($editor -eq ""))
+    {
+        $editor = "notepad"
+    }
+    rot "git config --global core.editor ´$editor´" 0
 
     grau "`nAnstelle von code kannst du natürlich auch andere Editoren verwenden (notfalls notepad)."
 
 }
+
+function instchoco
+{
+    if (HasChoco)
+    {
+        gelb "Chocolatey ist bereits installiert."
+        return
+    }
+    if (Test-AdminRecht)
+    {
+        rot "Chocolatey wird installiert..."
+        Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        Start-Sleep -Seconds 2
+    }
+    else
+    {
+        Gelb "Hierfür brauchst Du Administrator-Rechte.~Starte die PowerShell als Administrator und führe das Tutorial-Skript erneut aus.~Danach kannst Du mit instchoco Chocolatey installieren."
+        rot "<PowerShell als Administrator starten>"
+        rot "instchoco"
+    }
+}
+
+function install-tools
+{
+    [CmdletBinding()]
+    param (
+    )
+    $prg = @()
+    $anz = @()
+
+    if (HasChoco)
+    {
+        if (-not (hasvim))
+        {
+            $prg += "vim"
+            $anz += "VIM (Editor für Konsolen)"
+        }
+        if (-not (HasCode))
+        {
+            $prg += "vscode"
+            $anz += "Visual Studio Code"
+        }
+        $prg += "meld"
+        $anz += "Meld (Merge Tool)"
+        $prg += "p4merge"
+        $anz += "P4Merge (Merge Tool)"
+        $prg += "kdiff3"
+        $anz += "kdiff3 (Merge Tool)"
+    }
+    else
+    {
+        $prg += "choco"
+        $anz += "Chocolatey (Tool zur Installation von Software)"
+    }
+    cls
+    if (Test-AdminRecht)
+    {
+        gelb "Folgende Programme können installiert werden:~"
+        for ($nr = 1; $nr -le $anz.Length; $nr++)
+        {
+            Write-Host "${nr}. $($anz[$nr-1])"
+        }
+
+        [int]$ein = Read-Host -Prompt "`nBitte wählen (1-$($anz.Length) / keine Eingabe)"
+        if ($ein -gt 0 -and ($ein -le $anz.Length))
+        {
+            $install = $prg[$ein - 1]
+            if ($install -ne "choco")
+            {
+                choco install $install -y
+
+                if ($install -eq "p4merge")
+                {
+                    cls
+                    # Konfiguration von p4merge
+                    $p4mPath = ""
+                    if (Test-Path -Path 'C:\Program Files\Perforce\p4merge.exe')
+                    {   
+                        $p4mPath = 'C:\Program Files\Perforce\p4merge.exe'
+                    }
+                    else
+                    {
+                        if (Test-Path -Path "$([System.Environment]::GetFolderPath("user"))\AppData\Local\Perforce\p4merge.exe")
+                        {
+                            $p4mPath = "$([System.Environment]::GetFolderPath("user"))\AppData\Local\Perforce\p4merge.exe"
+                        }
+                    }
+
+                    if ($p4mPath -eq "")
+                    {
+                        Write-Host "Konnte den Pfad zum p4merge.exe nicht finden. Bitte selber ausfindig machen und dann für die Konfiguration verwenden."
+                        $p4mPath = "<Pfad zur p4merge.exe hier einfügen>"
+                    }
+
+                    gelb "Settings für Git:"
+                    rot "git config --global merge.tool p4merge"
+                    rot "git config --global mergetool.p4merge.path `"$p4mPath`"" 0
+                    gelb "~In der Regel ist noch ein Neustart der PowerShell (und das Skript/init) notwendig."
+                }
+                elseif ($install -eq "meld")
+                {
+                    cls
+                    gelb "Settings für Git:"
+                    rot "git config --global merge.tool meld"
+                    grau "~Sollte dies nicht funktionieren bitte den Pfad der meld.exe suchen und und folgendes ausführen:"
+                    rot "git config --global mergetool.meld.path <hier den Pfad zu meld.exe einfügen>" 0
+                    gelb "~In der Regel sollte ein Neustart der PowerShell (und das Skript/init) ausreichend."
+                }
+                elseif ($install -eq "kdiff3")
+                {
+                    cls
+                    gelb "Settings für Git:"
+                    rot "git config --global merge.tool kdiff3"
+                    grau "~Sollte dies nicht funktionieren bitte den Pfad der kdiff3.exe suchen und und folgendes ausführen:"
+                    rot "git config --global mergetool.kdiff3.path <hier den Pfad zu kdiff3.exe einfügen>" 0
+                    gelb "~In der Regel sollte ein Neustart der PowerShell (und das Skript/init) ausreichend."
+                }
+
+                if ($install -in @("meld", "p4merge", "kdiff3"))
+                {
+                    gelb "~Einen Pfad zur .exe Datei findest Du durch folgende Schritte:"
+                    gelb "1. Startmenü öffnen und das Programm suchen bzw. Name des Programme (p4merge, meld) eingeben."
+                    gelb "2. Rechtsklick darauf und Dateispeicherort öffnen wählen."
+                    gelb "3. Im Explorer anschließend auf die angezeigte Verknüfung rechtsklicken und Eigenschaften wählen."
+                    gelb "4. Im Textfeld ´Ziel´ befindet sich der Pfad zur .exe Datei, diese markieren/kopieren"              
+
+                    gelb "~Bei einem Merge-Konflikt kann das Mergetool dann mit"
+                    rot "git mergetool"
+                    gelb "~aufgerufen werden. Dort kan man dann wählen was von welcher Version (Branch) in die aktuelle Zieldatei soll."
+                    grau "~Bei meld (braucht etwas Zeit zum Laden nach git mergetool) zuerst die mittlere Datei (in den Inhalt klicken), dann kann man speichern.~Bei p4merge muss ggfs. das Encoding mit File/Character Encoding auf UTF8 geändert werden.. "
+                }
+            }
+            else
+            {
+                gelb "Es wird nun chocolatey installiert. Nach Abschluss der Installation die PowerShell erneut starten, und das Tutorial-Skript ausführen."       
+                gelb "Solltest Du Tools installieren wollen, einfach install-tools erneut ausführen."
+                gelb "Andernfalls das Tutorial mit init initialisieren.`n"
+                Read-Host -Prompt "Return zu starten der Installation von chocolatey"
+                instchoco
+            }
+        }
+    }
+    else
+    {
+        gelb "Für die Instalation werden Administratorrechte benötigt."
+        gelb "~Bitte die PowerShell als Administrator starten, das Tutorial-Skript ausführen und install-tools erneut aufrufen."
+    }
+}
+
 
 function Install
 {
@@ -347,8 +613,19 @@ function Install
             Write-Host "A.  Automatische Installation (benötigt Administrator-Rechte; installiert zuvor Chocolatey und damit dann git)"
             Write-Host "AC. Chocolatey Website in Chrome öffnen"
             Write-Host "AE. Chocolatey Seite in Edge öffnen"
+            Write-Host "I.  Ich habe es manuell installiert."
             Write-Host "Q.  Installationsassistenten beenden."
             $ein = Read-Host -Prompt "Bitte wählen (c, e, a, ac, ae, q)"
+        }
+        if ($ein -eq "i")
+        {
+            if (-not (HasGit))
+            {
+                Write-Host "Ok, Du solltest die PowerShell und danach das Tutorial-Skript neu starten."
+                break
+            }
+            Write-Host "Ja, ich habe erkannt das Git installiert ist. Du braucht die PowerShell nicht neu starten sondern kann sofort loslegen."
+            break
         }
         if ($ein -eq "q")
         {
@@ -379,9 +656,7 @@ function Install
             }
             if (-not (HasChoco))
             {
-                rot "Chocolatey wird installiert..."
-                Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-                Start-Sleep -Seconds 2
+                instchoco
                 if (-not (HasChoco))
                 {
                     $Global:schritt = -99999
@@ -420,9 +695,24 @@ function HasVIM()
     {
 
     }
-    return false
+    return $false
 }
 
+function HasCode()
+{
+    try
+    {
+        $v = (code --version)
+        [int]$vl = $v[0].replace(".", "")
+
+        return ($vl -gt 0)
+    }
+    catch
+    {
+
+    }
+    return $false
+}
 function HasChoco()
 {
     try
@@ -460,7 +750,11 @@ function Hilfe
             "Lange Textausgaben", "Textfarben",
             "Commit", "Repository", "Branch", "Merge", "Tag",
             "Hash", "Workspace",
-            "Github", "Bitbucket")]
+            "Github", "Bitbucket",
+            "Alias", "Cmdlet", "Powershell Befehle",
+            "Ordner anzeigen", "Dateiinhalte anzeigen",
+            "Navigation in der PowerShell",
+            "Befehlesparameter")]
         $Was = "Befehle"
     )
 
@@ -474,12 +768,14 @@ function Hilfe
         Write-Host "Anweisung (oder a) : Zeigt nochmal die Anweisung des aktuellen Schrittes" -ForegroundColor Cyan
         Write-Host "Nochmal (oder n)   : Führt den aktuellen Schritt erneut aus (Achtung: Tutorial wird dabei zurückgesetzt!)" -ForegroundColor Cyan
         Write-Host "Zurück (oder z)    : Springt ein Schritt zurück (Achtung: Tutorial wird dabei zurückgesetzt!)" -ForegroundColor Cyan
-        Write-Host "Schritt <nr>       : Springt zum angegeben Schritt (z.B. Schritt 3 oder s 3)" -ForegroundColor Cyan
+        Write-Host "Schritt <nr> <k>   : Springt zum angegeben Schritt <nr> des Kapitels <k> (z.B. Schritt 3 1 oder s 3 1)" -ForegroundColor Cyan
+        Write-Host "                     Ohne Angabe des Kapitels (s 10) wird innerhalb des aktuellen Kapitel gesprungen." -ForegroundColor Cyan
         Write-Host "Inhalt             : Zeigt eine Kapitelübersicht mit der Möglichkeit ein Kapitel zu wählen" -ForegroundColor Cyan
         Write-Host "Init               : Setzt das Tutorial zurück. Danach fängt man mit w oder weiter bei Schritt 1 ein" -ForegroundColor Cyan
         Write-Host "Hilfe (oder help)  : Liste die Befehle auf (dieser Text). Mit 'Hilfe <Strg+Space> kann angegeben werden, über was man Hilfe möchte." -ForegroundColor Cyan
         Write-Host "Info               : Kompletter Info Text (der von init)" -ForegroundColor Cyan
         Write-Host "Install            : Informationen zur Installation von git" -ForegroundColor Cyan
+        Write-Host "Install-tools      : Instalation von Tools (Editoren, Merge-Tools)" -ForegroundColor Cyan
     }
     elseif ($Was -eq "Kopieren")
     {
@@ -540,6 +836,8 @@ Texte in Rot stellt die Anweisung oder die Befehlszeile dar, die exakt so eingeg
         weiss "Ein Branch ist eine Art Name für einen Bereich im #rep. Damit können unterschiedliche Entwickler gleichzeitig arbeiten ohne sich in die Quere zu kommen."
         weiss "Es gibt immer einen Master-#bra in dem der entgültige #com gespeichert wird."
         weiss "Mehere #braes mit unterschiedlichen Änderungen werden mit einem Merge zu einen Master-#bra 'zusammengefügt'."
+        weiss "~Nach der Erstellung eines #rep mit 'git init' wird automatisch der Branch 'master' erstellt."
+        weiss "In diesem Branch sollte immer die neuste nutzbare Version abgelegt werden. Also eine Version die immer alle Änderungen alle Branches beinhaltet."
 
     }
     elseif ($Was -eq "Tag" -or ($Was -eq "Hash"))
@@ -594,6 +892,75 @@ Texte in Rot stellt die Anweisung oder die Befehlszeile dar, die exakt so eingeg
         {
             Start-Process "msedge.exe" -ArgumentList "https://bitbucket.org/"
         }
+    }
+    elseif ($Was -in "Alias", "Cmdlet", "Powershell Befehle")
+    {
+        weiss "Ein Cmdlet bzw. Powershell Befehl besteht in der Regel aus einem Verb-Nomen."
+        weiss "z.B. Get-ChildItem, Get-Content, Set-Location"
+        weiss "Es gibt für diese Kombinationen aber auch Aliase, z.B.: dir, type, cd"
+        weiss "Welche Aliase es für welche Verb-Nomen Befehle gibt kann man mit 'Get-Alias -Definition verb-nomen' z.B.:"
+        weiss "Get-Alias -Definition Get-Content"
+        weiss "Andersherum geht es ohne -Definition (Get-Alias dir)."
+        weiss "Im Tutorial verwendet ich viele Verb-Nomen Befehle, aber auch Aliase kommen zum Einsatz."
+        weiss "Es ist dir überlassen ob Du z.B. Get-Content code.cs oder type code.cs verwendest."
+    }
+    elseif ($Was -eq "Ordner anzeigen")
+    {
+        weiss "Für das auflisten von Ordnerinhalten gibt es das Cmdlet Get-ChildItem (oder Alias dir, ls oder gci)."
+        weiss "dir temp        Listet z.B: den Inhalt des Ordner temp auf (dieser muss sich im aktuellen Verzeichnis befinden)."
+        weiss "~Das aktuelle Verzeichnis wird im Eingabe-Prompt immer zwischen PS und der >-Klammer angegeben."
+        weiss "Das aktuelle Verzeichnis kann man auch mit einem . ansprechen"
+        weiss "dir .           Listet auch den Inhalt des aktuellen Orders auf"
+        weiss "code .          Öffent Visual Studio Code im aktuellen Ordner (ohne Punkte wird VSC nur gestartet)"
+        weiss "~Einen Ordner zurück spricht man mit .. an"
+        weiss "dir ..          Listet den Inhalt des vorherigen Ordners (z.B. user1) auf."
+        weiss "~Man kann diese auch kombinieren (dir ..\..\PowerShellTutorial\User1"
+        gelb "~Um z.B. vom aktuellen Ordner 'user1' den Inhalt von 'user2' zu sehen gibt man"
+        weiss "dir ..\user2    ein"
+        weiss "~git clone . ..\user2   Klont also vom aktuellen (.) Ordner in den Ordner davor\user2"
+        weiss "~Absolute Pfade werden immer mit Laufwerkbuchstabe:\Ordner...\Ordner... angegeben."
+        weiss "dir $([System.Environment]::GetFolderPath('User'))"
+    }
+    elseif ($Was -eq "Dateiinhalte anzeigen")
+    {
+        weiss "Zum einen kann man den Explorer nutzen und dort die Datei öffnen."
+        weiss "Das ist aber super umständlich wenn man in der PowerShell arbeitet."
+        weiss "Dafür gibt es Get-Content (oder Alias type, cat, gc)."
+        weiss "Get-Content code.cs"
+        weiss "type code.cs"
+        weiss "~Hier können natürlich auch Pfade verwendet werden:"
+        weiss "type .\code.cs        (aktueller Pfad)"
+        weiss "type ..\user2\code.cs (ein Pfad zurück, dann Ordner user2 und dort die code.cs)"
+        weiss "type $([System.Environment]::GetFolderPath('User'))\GIT_LESSON1\user1\code.cs"
+    }
+    elseif ($Was -eq "Navigation in der PowerShell")
+    {
+        weiss "Mit Cursor-Hoch bzw. Cursor-Runter kann der vorherige oder wieder der Befehl danach angezeigt werden."
+        weiss "Du kannst Du Taste auch mehrmals drücken um z.B. 10 Befehle zurück zu gehen."
+        weiss "~Mit Cursor links bzw. Cursor-Rechts kannst Du den Cursor bewegen um z.B. einen vorherigen Befehl leicht zu ändern."
+        weiss "~Sollte dich der Inhalt der PowerShell stören, kannst Du den Bildschirm mit 'cls' und Return leeren."
+        rot "Hier im Tutorial kannst Du mit a und Return dir die Anweisung zum aktuellen Schritt nochmal anzeigen lassen. Hier wird der Bildschirm auch geleert."
+        weiss "~Weitere Tasten:"
+        weiss "Pos1        : Springt an den Zeilenanfang"
+        weiss "Ende        : Springt an das Zeilenende"
+        weiss "Bild hoch   : Blättert eine Seite nach oben"
+        weiss "Bild runter : Blättert eine Seite nach unten"
+        weiss "Esc         : Löscht die aktuelle Zeile"
+    }
+    elseif ($Was -eq "Befehlesparameter")
+    {
+        weiss "Befehlsparameter geben einem Befehl die notwendigen Daten um arbeiten zu können."
+        weiss "Ein Get-Content (type) ohne Angabe einer Datei würde nicht wirklich funktionieren. Die Datei ist also der Parameter bzw. das Argument für den Parameter"
+        gelb "~In der PowerShell werden Parameter mit einem vorangestellten - benannt"
+        weiss "type -Path code.cs"
+        weiss "Wobei hier der Name weg gelassen werden kann. Da -Path der erste Parameter ist ist das erste Argument immer für diesen Parameter."
+        weiss "Gibst Du - ein gefolgt von einem Tabulator, kannst Du mit Tab/Shift Tab die verfügbaren Parameter vor/zurück blättern."
+        weiss "Drückst du nach einen - Strg+Space werden alle verfügbaren Parameter aufgelistet und Du kannst den entsprechenden auswählen."
+        gelb "~In Git werden Parameter in der Regel mit -- (z.B. --message) oder kurz auch mit - (z.B. -m) gebannt."
+        weiss "Hier bietet PowerShell keine Auflistung oder Vervollständigung mit Strg+Space/Tab. Man muss wissen was man eingibt."
+        weiss "Der Grund ist, das git kein PowerShell Befehl ist (es ist eine normale .exe Datei, die man auch in der Cmd-Konsole oder Bash-Konsole starten kann)."
+        weiss "Die Bash-Konsole besitzt dann Parameterlisten und Vervollständigung von Befehlen und Parameter."
+        weiss "ACHTUNG: In der Bash-Konsole werden absolute Pfade nicht mit C:\User...\ sondern mit C/User/.../ angegeben!"
     }
     else
     {
@@ -711,6 +1078,7 @@ function Schritt
     [Alias("s")]
     param(
         [int] $nr,
+        [int] $kapitel = -1,
         [int] $silent = 0
     )
 
@@ -725,106 +1093,308 @@ function Schritt
         w
         return
     }
+    # In welchem Kapitel bin ich
+    $kapAkt = [Math]::Truncate($global:schritt / 100)  # 0 = Kapitel 1, 1 = Kapitel 2...
+    if ($kapitel -gt -1)
+    {
+        $kapAkt = $kapitel - 1
+    }
+    $nr += ($kapAkt * 100)  # Kapitel 2 > kapAkt = 1, 1*100 = 100 + $nr = 1xx
+
+    
+    $kapitel = [Math]::Truncate($nr / 100)
+    $nrx = $nr - ($kapitel * 100)
+    $kapitel++;
     if ($silent -eq 0)
     {
-        gelb("Springe zum Schritt $nr")
+        gelb("Springe zum Schritt $nrx - Kapitel $kapitel")
     }
-    init 1
-    if ($nr -gt 1) { git init }
-    if ($nr -gt 2) { git add --all }
-    if ($nr -gt 3) { git commit --message "Start" }
-    if ($nr -gt 4) { Set-Content -Path leer.txt -Value "Änderung" }
-    if ($nr -gt 5)
+    if ($kapitel -eq 1)
     {
-        Remove-Item .\datei1.txt
-        "Inhalt" > inhalt.txt
-        git add leer.txt
-        git commit --message "kleine Änderung"
-    }
-    if ($nr -gt 6)
-    {
-        git add --all
-        git commit --message "gelöscht und hinzu"
-    }
-    Write-Host "Scotty beam me up"
-    Start-Sleep -Milliseconds ($warteZeitFuerGimmics * 2)
-
-    if ($nr -gt 11)
-    {
-        mkdir .\ordner | Out-Null
-        @("datei1", "datei2", "datei3") | New-Item -ItemType File -Path { "Ordner\$_.txt" }
-        git add --all
-        git commit --message "Neuer Ordner"
-    }
-    if ($nr -gt 14) { git tag Neuer.Ordner }
-    if ($nr -gt 18) { Make19 }
-    Write-Host "Connection to matrix.Nebuchadnezzar"
-    Start-Sleep -Milliseconds ($warteZeitFuerGimmics * 3)
-    if ($nr -gt 19)
-    {
-        git add Dokumentation
-        git add .\neu\Unterordner\readme.txt
-        git commit -m "Viel hinzu"
-        git tag viel
-    }
-    if ($nr -gt 20)
-    {
-        "A" > stage.txt
-        git add --all | Out-Null
-        git commit -m "Stage A" | Out-Null
-        "B" > stage.txt
-    }
-    if ($nr -gt 21) { git add stage.txt }
-    if ($nr -gt 22) { "C" > stage.txt }
-    if ($nr -gt 24) { git commit -m "Stage B" }
-    if ($nr -gt 25)
-    {
-        git add --all
-        git commit -m "Stage C"
-    }
-    if ($nr -gt 26)
-    {
-        $codeOriginal = "class Programm`n    {`n        public void main(string[] args)`n        {`n            // I do something...`n        }`n    }`n"
-        Set-Content -Value $codeOriginal -Path code.cs
-        git add --all
-        git commit -m "Code"
-    }
-    if ($nr -gt 27)
-    {
-        for ($versuch = 1; $versuch -le 3; $versuch++)
+        init 1
+        if ($nr -gt 1) { git init }
+        if ($nr -gt 2) { git add --all }
+        if ($nr -gt 3) { git commit --message "Start" }
+        if ($nr -gt 4) { Set-Content -Path leer.txt -Value "Änderung" }
+        if ($nr -gt 5)
         {
-            $codeVersuch = "class Programm`n    {`n        public void main(string[] args)`n        {`n            // I do something...`n            // Versuch $versuch`n        }`n    }`n"
-            Set-Content -Value $codeVersuch -Path code.cs
-            git stash save "Versuch $versuch"
+            Remove-Item .\datei1.txt
+            "Inhalt" > inhalt.txt
+            git add leer.txt
+            git commit --message "kleine Änderung"
         }
-    }
-
-    if ($nr -gt 28) { git stash apply 0 }
-    if ($nr -gt 29) { git stash drop 1 }
-    if ($nr -gt 30)
-    {
-        git add -all
-        git commit -m "Versuch 3"
-        git stash clear
-    }
-    if ($nr -gt 31)
-    {
-        for ($versuch = 4; $versuch -le 7; $versuch++)
+        if ($nr -gt 6)
         {
-            $codeVersuch = "class Programm`r    {`r        public void main(string[] args)`r        {`r            // I do something...`r            // Versuch $versuch`r        }`r    }`r"
-            Set-Content -Value $codeVersuch -Path code.cs
-            git stash save "Versuch $versuch" | Out-Null
+            git add --all
+            git commit --message "gelöscht und hinzu"
         }
-        git stash pop
-        for ($versuch = 4; $versuch -le 6; $versuch++)
+        Write-Host "Scotty beam me up"
+        Start-Sleep -Milliseconds ($warteZeitFuerGimmics * 2)
+
+        if ($nr -gt 11)
         {
-            git restore code.cs
+            mkdir .\ordner | Out-Null
+            @("datei1", "datei2", "datei3") | New-Item -ItemType File -Path { "Ordner\$_.txt" }
+            git add --all
+            git commit --message "Neuer Ordner"
+        }
+        if ($nr -gt 14) { git tag Neuer.Ordner }
+        if ($nr -gt 18) { Make19 }
+        Write-Host "Connection to matrix.Nebuchadnezzar"
+        Start-Sleep -Milliseconds ($warteZeitFuerGimmics * 3)
+        if ($nr -gt 19)
+        {
+            git add Dokumentation
+            git add .\neu\Unterordner\readme.txt
+            git commit -m "Viel hinzu"
+            git tag viel
+        }
+        if ($nr -gt 20)
+        {
+            "A" > stage.txt
+            git add --all | Out-Null
+            git commit -m "Stage A" | Out-Null
+            "B" > stage.txt
+        }
+        if ($nr -gt 21) { git add stage.txt }
+        if ($nr -gt 22) { "C" > stage.txt }
+        if ($nr -gt 24) { git commit -m "Stage B" }
+        if ($nr -gt 25)
+        {
+            git add --all
+            git commit -m "Stage C"
+        }
+        if ($nr -gt 26)
+        {
+            $codeOriginal = "class Programm`n{`n    public void main(string[] args)`n    {`n        // I do something...`n    }`n}`n"
+            Set-Content -Value $codeOriginal -Path code.cs
+            git add --all
+            git commit -m "Code"
+        }
+        if ($nr -gt 27)
+        {
+            for ($versuch = 1; $versuch -le 3; $versuch++)
+            {
+                $codeVersuch = "class Programm`n{`n    public void main(string[] args)`n    {`n        // I do something...`n        // Versuch $versuch`n    }`n}`n"
+                Set-Content -Value $codeVersuch -Path code.cs
+                git stash save "Versuch $versuch"
+            }
+        }
+
+        if ($nr -gt 28) { git stash apply 0 }
+        if ($nr -gt 29) { git stash drop 1 }
+        if ($nr -gt 30)
+        {
+            git add -all
+            git commit -m "Versuch 3"
+            git stash clear
+        }
+        if ($nr -gt 31)
+        {
+            for ($versuch = 4; $versuch -le 7; $versuch++)
+            {
+                $codeVersuch = "class Programm`r{`r    public void main(string[] args)`r    {`r        // I do something...`r        // Versuch $versuch`r    }`r}`r"
+                Set-Content -Value $codeVersuch -Path code.cs
+                git stash save "Versuch $versuch" | Out-Null
+            }
             git stash pop
+            for ($versuch = 4; $versuch -le 6; $versuch++)
+            {
+                git restore code.cs
+                git stash pop
+            }
+        }
+        if ($nr -gt 32) { git restore . }
+        if ($nr -gt 33)
+        { 
+            CodeCSExt
+            @("A", "B", "C", "D", "E") | ForEach-Object { $_ > "$_.txt"; git add .; git commit -m "Datei $_.txt hinzugefügt." } | Out-Null
+        }
+        if ($nr -gt 34)
+        {
+            @("A", "B", "C", "D", "E") | ForEach-Object { "Änderung $_"  > "$_.txt"; git add .; git commit -m "Datei $_.txt verändert." | Out-Null; git tag "Change$_" | Out-Null } 
+            git revert ChangeC --no-edit
+        }
+        if ($nr -gt 36)
+        {
+            git branch NeueKlassen
+            git checkout NeueKlassen
+        }
+        if ($nr -gt 37)
+        {
+            md Klassen
+            cd Klassen
+            "class Mitarbeiter { ...} " > Mitarbeiter.class
+            "class Kunde { ... }" > Kunde.class
+            "class Auftrag { ...}" > Auftrag.class
+            git add --all
+            git commit -m "Mitarbeiter, Kunde und Auftrag erstellt"
+        }
+        if ($nr -gt 38)
+        {
+            cd ..
+            git checkout master
+        }
+        if ($nr -gt 39)
+        {
+            CodeCSBugdel
+        }
+        Write-Host "Rufe das A-Team"
+        Start-Sleep -Milliseconds ($warteZeitFuerGimmics * 2)
+        if ($nr -gt 40)
+        {
+            git add --all
+            git commit -m "Bugfix"
+        }
+        if ($nr -gt 41)
+        {
+            git checkout NeueKlassen
+            cd Klassen
+            "// noch zu tun: Kundennummer einfügen" >> Kunde.class
+            "Dokumentation" > doku.txt
+            git add --all
+            git commit -m "Todo für Kunde + Doku"
+        }
+        if ($nr -gt 42)
+        {
+            cd..
+            git checkout master
+            "Änderung`nÄnderung 2`n" > leer.txt
+            "Neue Datei" > leer2.txt
+            Remove-Item stage.txt
+            git add --all
+            git commit -m "Geändert, neu und gelöscht"
+        }
+        if ($nr -gt 43)
+        {
+            git checkout NeueKlassen
+            "hier initialisieren wir die neuen Klassen" > Neueklassen.class
+            cd Dokumentation
+            "Anleitung neue Klassen" > neueklassen.txt
+            cd..
+            git add --all
+            git commit -m "Letzte Änderungen und Doku"
+        }
+        if ($nr -gt 44)
+        {
+            git checkout master
+            git merge NeueKlassen
+        }
+        if ($nr -gt 45)
+        {
+            for ($i = 1; $i -le 10; $i++) { Add-Content -Value "Zeile $i" -Path branch.txt }
+            git add --all
+            git commit -m "branch.txt hinzugefügt 1-10"
+            git branch zwei
+            git checkout zwei
+            del branch.txt
+            for ($i = 1; $i -le 10; $i++)
+            { 
+                if ($i -eq 3) 
+                {
+                    Add-Content -Value "ZWEI" -Path branch.txt
+                }
+                Add-Content -Value "Zeile $i" -Path branch.txt 
+            }
+        }
+        if ($nr -gt 46)
+        {
+            git add --all
+            git commit -m "branch.txt Nach Zeile 2: ZWEI"
+            git checkout master
+            git branch drei
+            git checkout drei
+            del branch.txt
+            for ($i = 1; $i -le 10; $i++)
+            { 
+                if ($i -eq 6)
+                {
+                    Add-Content -Value "DREI" -Path branch.txt
+                }
+                Add-Content -Value "Zeile $i" -Path branch.txt 
+            }
+            git add --all
+            git commit -m "branch.txt Nach Zeile 5: DREI"
+        }
+        if ($nr -gt 47)
+        {
+            git checkout master
+            git branch vier
+            git checkout vier
+            del branch.txt
+            for ($i = 1; $i -le 10; $i++)
+            { 
+                if ($i -eq 10)
+                {
+                    Add-Content -Value "VIER" -Path branch.txt
+                }
+                Add-Content -Value "Zeile $i" -Path branch.txt 
+            }
+            git add --all
+            git commit -m "branch.txt Nach Zeile 9: VIER"        
+            git checkout master
+        }
+        if ($nr -gt 49)
+        {
+            git merge zwei
+            git merge drei
+            git merge vier
+        }
+        if ($nr -gt 50)
+        {
+            git checkout vier
+            del branch.txt
+            for ($i = 1; $i -le 10; $i++)
+            { 
+                if ($i -eq 5)
+                {
+                    Add-Content -Value "Irgendeine Veränderung" -Path branch.txt
+                }
+                Add-Content -Value "Zeile $i" -Path branch.txt 
+            }
+            git add --all
+            git commit -m "branch.txt geändert."
+            git checkout master
+        }
+        if ($nr -gt 51)
+        {
+            git branch -d NeueKlassen
+            git branch -d zwei
+            git branch -d drei
+            git branch -D vier
+        }
+        if ($nr -gt 53)
+        {
+            git branch base1
+            git checkout base1
+            Add-Content -Path code.cs -value "// NEUE ZEILE FÜR DEN REBASE TEST"
+            "Neue Datei" >rebase.txt
+            git add --all
+            git commit -m "Rebasetest"
+            git checkout master
+            "Neue Datei im Master" >master.txt
+            git add --all
+            git commit -m "Rebasetest"
+        }
+        if ($nr -gt 54)
+        {
+            git rebase base1
+        }
+        if ($nr -gt 55)
+        {
+            $Global:MakeDiff = $false
+
         }
     }
-    if ($nr -gt 32) { git restore . }
+    if ($kapitel -eq 2)
+    {
+        initkapitel2
+    }
     
-
+    
+    
+    
+    
     <# TODO __2__(Schritt #) Schritt nr erstellen  #>
     $global:schritt = $nr
     weiter
@@ -869,11 +1439,18 @@ function Weiter
         Clear-Host
         if ($nr -lt 10000)
         {
-            $st = "Schritt $nr"; Write-Host (" " * ($st.Length) * 3 + "`n" + " " * ($st.Length) + $st + " " * ($st.Length) + "`n" + " " * ($st.Length) * 3)  -BackgroundColor Gray -ForegroundColor Black
+            if ($nr % 100 -eq 0)
+            {
+                $nr++
+            }
+            $kapitel = [Math]::Truncate($nr / 100)
+            $nrx = $nr - ($kapitel * 100)
+            $kapitel++;
+            $st = "Schritt $nrx (Kapitel $kapitel)"; Write-Host (" " * ($st.Length) * 3 + "`n" + " " * ($st.Length) + $st + " " * ($st.Length) + "`n" + " " * ($st.Length) * 3)  -BackgroundColor Gray -ForegroundColor Black
         }
         else
         {
-            $st = "Tutorialeinleitung $($nr-9999)"; Write-Host (" " * ($st.Length) * 3 + "`n" + " " * ($st.Length) + $st + " " * ($st.Length) + "`n" + " " * ($st.Length) * 3)  -BackgroundColor Gray -ForegroundColor Black
+            $st = "Tutorialeinleitung $($nr - 9999)"; Write-Host (" " * ($st.Length) * 3 + "`n" + " " * ($st.Length) + $st + " " * ($st.Length) + "`n" + " " * ($st.Length) * 3)  -BackgroundColor Gray -ForegroundColor Black
         }
     }
     switch ($nr)
@@ -1314,7 +1891,7 @@ function Weiter
         {
             if (-not ($anweisung))
             {
-                $codeOriginal = "class Programm`n    {`n        public void main(string[] args)`n        {`n            // I do something...`n        }`n    }`n"
+                $codeOriginal = "class Programm`n{`n    public void main(string[] args)`n    {`n        // I do something...`n    }`n}`n"
                 Set-Content -Value $codeOriginal -Path code.cs
                 git add --all
                 git commit -m "Code"
@@ -1387,7 +1964,7 @@ function Weiter
             {
                 for ($versuch = 4; $versuch -le 7; $versuch++)
                 {
-                    $codeVersuch = "class Programm`r    {`r        public void main(string[] args)`r        {`r            // I do something...`r            // Versuch $versuch`r        }`r    }`r"
+                    $codeVersuch = "class Programm`r{`r    public void main(string[] args)`r    {`r        // I do something...`r        // Versuch $versuch`r    }`r}`r"
                     Set-Content -Value $codeVersuch -Path code.cs
                     git stash save "Versuch $versuch" | Out-Null
                 }
@@ -1414,22 +1991,398 @@ function Weiter
             gelb "Zuerst löschen wird die überbleibsel von den letzten Stashes."
             rot "git restore ."
             grau "Also alles zurücksetzten zum letzten #com."
-            git stash pop
+            break
+        }
+        # KAPITEL: Revert
+        33
+        {
+            if (-not ($anweisung))
+            {
+                CodeCSExt
+                @("A", "B", "C", "D", "E") | ForEach-Object { $_ > "$_.txt"; git add .; git commit -m "Datei $_.txt hinzugefügt." | Out-Null }
+            }
+            gelb "Nach einiger Zeit entstehend eineige Dateien. Inzwischen gibt es die Dateien A.txt, B.txt, C.txt, D.txt und E.txt"
+            gelb "In jeder diese Dateien steht der entsprechende Buchstaben (also in A.txt ein ´A´ usw.)"
+            gelb "Die Dateien wurden jeweils in einen eigenen #com geschrieben. Somit haben wir 5 weitere #coms."
+            gelb "Schau dich etwas um..."
+            rot "dir"
+            rot "Get-Content C.txt" 0
+            rot "git log --oneline" 0
+            break
+        }
+        34
+        {
+            if (-not ($anweisung))
+            {
+                @("A", "B", "C", "D", "E") | ForEach-Object { "Änderung $_"  > "$_.txt"; git add .; git commit -m "Datei $_.txt verändert." | Out-Null; git tag "Change$_" | Out-Null }
+            }
+            gelb "Später wurden alle (A-E) Dateien verändert. Und wenig später merkst Du, das die Änderung in C.txt fehlerhaft ist."
+            gelb "Natürlich könnte man zum #com vor der Verändert von C.txt springen. Dann müsste man aber wieder die D.txt und E.txt Änderung machen."
+            gelb "In diesem Fall wäre der Aufwand noch überschaubar. Es ist ja nur jeweil eine Datei pro #com. Aber es könnten auch 100 Dateien in jedem #com geändert worden sein. Und Dateien hinzugefügt oder gelöscht..."
+            gelb "Zuerst schauen wir uns um... dann machen wir nun nur die Änderung der C.txt Datei rückgängig."
+            rot "dir"
+            rot "Get-Content C.txt" 0
+            rot "git log --oneline" 0
+            grau "~Zum Glück wurden die Änderungscommits mit einem Tag versehen."
+            rot "git revert ChangeC"
+            grau "~Danach geht der Editor auf, der Informationen zum Revert auflistet. Dies wird im Editor gemacht da man diese Information vielleicht abspeichern, ausdrucken o.ä. will.~Wir schließen einfach den Editor (Vim -> :q)."
+            break
+        }
+        35
+        {
+            gelb "Wir schauen uns mal um."
+            rot "dir"
+            rot "Get-Content A.txt" 0
+            rot "Get-Content B.txt" 0
+            grau "~Ok, das sind noch die geänderte Versionen"
+            rot "Get-Content C.txt"
+            grau "~Diese Änderung wurde rückgängig gemacht, hier steht nur ein ´C´."
+            rot "Get-Content D.txt"
+            rot "Get-Content E.txt" 0
+            grau "~Das sind weiterhin die neuen Versionen. Es wurde als nur die C.txt auf den alten (ersten) Stand gebracht."
+            grau "git revert ist ein nützliches Tool. Bei komplexen Änderungen (womöglich in der gleichen Datei) kann git revert jedoch auf Probleme stoßen. Dann ist die Meldung im Editor zu beachten."
+            rot "git log --oneline"
+            grau "~Ok, das #com von ChangeC gibt es noch, es wurde automatisch ein neues #com erstellt in dem das Revert geschrieben wurde."
+            grau "~Das läst die Option offen zum #com ChangeB zu springen und die Änderungen doch noch händisch zu übernehmen. Bei komplexen Änderungen durchaus notwendig."
+            break
+        }
+        # KAPITEL: Branches
+        36
+        {
+            gelb "#braes sind Nebenläufige #coms und werden für die parallele Entwicklung benötigt."
+            gelb "Angenommen in einem Projekt soll etwas zusätzliches programmiert (z.B. ein paar neue Klassen) werden da etwas Zeit benötigt."
+            gelb "Damit diese (unvollständige) Klassen nicht ein ein #com einfließen macht man ein Branch. Ein neuer Entwicklungszweig."
+            gelb "Dort kann man dann arbeiten, unabhängig vom Master-Branch der ja immer die aktuelle Version darstellt."
+            gelb "Erst wenn die Arbeit im ´Klassen´-Entwicklungszweig ferig ist, bindet man diese in den Master-Branch ein (Merge)."
+            gelb "~Wird brauchen also eine Art Snapshop des aktuellen Standes in dem wir unsere Klassen erstellen. Dann arbeiten wir daran."
+            rot "git branch NeueKlassen"
+            grau "~Wir müssen noch in diesen Branch wechseln"
+            rot "git checkout NeueKlassen"
+            grau "~Ab sofort arbeiten wir im Branch ´NeueKlassen´."
+            break
+        }
+        37
+        {
+            gelb "Wir erstellen einen Ordner in dem wir schonmal ein paar Klassen schreiben."
+            gelb "Wir wechseln dann in diesen Ordner"
+            rot "md Klassen"
+            rot "cd Klassen" 0
+            gelb "~Wir erstellen nur ein paar Klassendateien."
+            rot "´class Mitarbeiter { ... }´ > Mitarbeiter.class"
+            rot "´class Kunde { ... }´ > Kunde.class" 0
+            rot "´class Auftrag { ... }´ > Auftrag.class" 0
+            gelb "~Zu diesem Zustand machen wir ein #com."
+            rot "git add --all"
+            git "git commit -m ´Mitarbeiter, Kunde und Auftrag erstellt´" 0
+            break
+        }
+        38
+        {
+            gelb "Nun müssen wir in der aktuellen Version schnell etwas anpassen (Bubfix)"
+            gelb "In der Datei code.cs hat sich wohl ein Bug eingeschlichen. Den müssen wir entfernen."
+            gelb "Dazu wechseln wir in den vorherigen Ordner."
+            gelb "Da die aktuelle Version geändert werden soll, müssen wir in den Master-Branch wechseln."
+            rot "cd .."
+            rot "git checkout master" 0
+            rot "dir" 0
+            grau "~Wir sehen, im Master ist der Ordner ´Klassen´ verschwunden. Dieser existiert nur im ´NeueKlassen´ Branch."          
+            break
+        }
+        39
+        {
+            gelb "Nun editieren wir die Datei ´code.cs´ und suchen den Fehler (Tipp, er ist in Zeile 8)."
+            edit -file code.cs -ask 1
+            break
+        }
+        40
+        {
+            gelb "Nun erstellen wir ein #com und schauen uns mal die #coms genauer an."
+            rot "git add --all"
+            rot "git commit -m ´Bugfix´" 0
+            rot "git log --graph --all --oneline" 0
+            grau "~In dieser Darstellung sehen wir die Abzweigung unseres ´NeueKlassen´ Branch."
+            break
+        }
+        41
+        {
+            gelb "Wir wechseln wieder zum Branch ´NeueKlassen´ und arbeiten an unseren Klassen weiter."
+            rot "git checkout NeueKlassen"
+            rot "dir" 0
+            grau "~Der Klassenordner ist wieder da"
+            rot "cd Klassen" 
+            rot "dir" 0
+            rot "´// noch zu tun: Kundenummer einfügen´ >> Kunde.class" 0
+            grau "Es sind zwei >> !!! D.h. den Text an die Datei anhängen"
+            rot "´Dokumentation´ > doku.txt"
+            rot "git add --all"
+            rot "git commit -m ´Todo für Kunde + Doku´" 0
+            rot "git log --graph --oneline --all 0"
+            grau "~Wir sehen nun ist der Master-Branch eine Abzweigung, da wir ja im ´NeueKlassen´ Branch den letzten #com gemacht haben."
+            break
+        }
+        42
+        {
+            gelb "Nun ändern wir nochmal etwas im Master-Branch und machen ein #com."
+            rot "cd .."
+            rot "git checkout master" 0
+            grau "~Wir schreiben in der leer.txt eine zweite Zeile ´Änderung 2´ (Vim: i, dann Text eingeben, Esc :wq<Return>)"
+            rot "edit leer.txt"
+            rot "´Neue Datei´ > leer2.txt" 0
+            rot "del stage.txt" 0
+            rot "git add --all"
+            rot "git commit -m ´Geändert, neu und gelöscht´" 0
+            break
+        }
+        43
+        {
+            gelb "Wir machen nun die letzten Änderung im Branch ´NeueKLassen´, danach wollen wir alle Änderung in der Master-Branch zusammenführen."
+            rot "git checkout NeueKlassen"
+            rot "´hier initialisieren wir die neuen Klassen´ > Neueklassen.class"
+            rot "cd Dokumentation" 0
+            rot "´Anleitung neue Klassen´ > neueklassen.txt" 0
+            rot "cd.." 0
+            rot "git add --all" 0
+            rot "git commit -m ´Letzte Änderungen und Doku´" 0
+            break
+        }
+        44
+        {
+            gelb "Mit git branch sehen wir, das wir noch im ´NeueKlassen´ Branch sind. Wir wechseln in den Master und schauen uns das Graph-Log an."
+            gelb "Anschließend Mergen wir den Branch ´NeueKlassen´ in den Master-Branch."
+            rot "git branch"
+            rot "git checkout master" 0
+            rot "git log --graph --oneline --all" 0
+            rot "git merge NeueKlassen" 0
+            rot "git log --graph --oneline --all" 0
+            grau "~Hier sehen wir gut, wie der NeueKlassen-Branch in den Master-Branch einfließt. Jetzt haben wir nur noch den Master-Branch und dieser beinhaltet nun alle Änderungen, die wir (abseits vom Master-Branch) im NeueKlassen-Branch durchgeführt hatten."
+            break
+        }
+        45
+        {
+            if (-not ($anweisung))
+            {
+                for ($i = 1; $i -le 10; $i++) { Add-Content -Value "Zeile $i" -Path branch.txt }
+            }
+            gelb "Beim erstellen neuer Ordner und Dateien innerhalb verschiedener und beliebig vieler Branches verläuft das Zusammenführen (Merge) immer ohne Probleme."
+            gelb "In einer Datei, die ich bereits erstelt habe, fügen wir nun aus 3 Branches Zeilen hinzu."
+            rot "git status"
+            grau "~Wir sehen, die branch.txt ist verändert und noch untracket (mit im #sta)"
+            rot "git add --all"
+            rot "git commit -m ´branch.txt hinzugefügt 1-10´"
+            grau "~Die hinzugefügte Datei muss Commitet werden. Vor der Erstellung eines Branches sollte/muss der aktuelle/Master-Branch aktuell sein!"
+            rot "git branch zwei" 
+            rot "git checkout zwei" 0
+            grau "~Wird schreiben zwischen Zeile 2 und 3 die Zeile: ´ZWEI´ (VIM: i -> Insert Mode, Text eingeben, Esc dann :wq<Return>)"
+            rot "edit branch.txt"
             break
         }
         # TODO >>> GEPRÜFT BIS HIER HIN *v*v*v*v*v*v*v*v*v*v*v*v*v* <<<
-        # KAPITEL: Branches
-        33
+        46
         {
-            gelb "#braes sind Nebenläufige #coms und werden für die parallele Entwicklung benötigt."
-            gelb "Einen weiteren Entwickler simulieren wir durch eine Klon des #rep im Ordner ..\user2."
-            gelb "Wir clonen also das aktuelle #rep nach ..\user2"
-            rot "git clone . ..\user2"
-            rot "dir .."
-            grau "Also Klone das 'Aktuelle' (.) #rep nach 'Ein Ordner Zurück\user2' (..\user2)."
-            grau "Nach dem dir sehen wir, das wir 2 #rep haben. Wir stellen und vor user1 und user2 nutzen unterschiedliche Rechner."
-            gelb "~Zusätzlich brauchen wir ein #rep für den Datenaustausch. Wir könnten hier Github oder Bitbucket nutzen."
+            gelb "Nun commiten wir diese Änderung in den Branch ´zwei´ und machen eine Änderung in einem weiteren Branch (den wir natürlich vom Master-Branch erstellen)."
+            rot "git add --all"
+            rot "git commit -m ´branch.txt Nach Zeile 2: ZWEI´" 0
+            rot "git checkout master" 0
+            rot "git branch drei" 0
+            rot "git checkout drei" 0
+            grau "~Wird schreiben zwischen Zeile 5 und 6 die Zeile: ´DREI´ (VIM: i -> Insert Mode, Text eingeben, Esc dann :wq<Return>)"
+            rot "edit branch.txt" 0
+            rot "git add --all" 
+            rot "git commit -m ´branch.txt Nach Zeile 5: DREI´" 0
             break
+        }
+        47
+        {
+            gelb "Wir machen eine letzte Änderung in einem weiteren Branch (den wir natürlich vom Master-Branch erstellen)."
+            rot "git checkout master" 0
+            rot "git branch vier" 0
+            rot "git checkout vier" 0
+            grau "~Wird schreiben zwischen Zeile 9 und 10 die Zeile: ´VIER´ (VIM: i -> Insert Mode, Text eingeben, Esc dann :wq<Return>)"
+            rot "edit branch.txt" 0
+            rot "git add --all" 
+            rot "git commit -m ´branch.txt Nach Zeile 9: VIER´" 0
+            rot "git checkout master"
+            rot "type branch.txt" 0
+            grau "~Im Master-Branch ist keine Änderung der Datei ´branch.txt´ vorhanden"
+            break
+        }
+        48
+        {
+            gelb "Wir kontrollieren mal alles."
+            rot "git checkout zwei"
+            rot "type branch.txt" 0
+            grau "~Hier steht nach Zeile 2 ´ZWEI´, dann Zeile 3 bis 10"
+            rot "git checkout drei"
+            rot "type branch.txt" 0
+            grau "~Hier steht nach Zeile 5 ´DREI´, dann Zeile 6 bis 10"
+            rot "git checkout vier"
+            rot "type branch.txt" 0
+            grau "~Hier steht nach Zeile 9 ´VIER´, dann Zeile 10"
+            rot "git checkout master"
+            rot "type branch.txt" 0
+            grau "Hier stehen nur Zeile 1 bis 10"
+            break
+        }
+        49
+        {
+            gelb "Nun führen wir schrittweise die 3 Branch in den Master-Branch. Wir sehen uns jedesmal die ´branch.txt´ Datei an."
+            rot "git merge zwei"
+            rot "type branch.txt" 0
+            grau "~Jetzt steht ´ZWEI´ nach Zeile 2"
+            rot "git merge drei"
+            rot "type branch.txt" 0
+            grau "~Jetzt steht auch ´DREI´ nach Zeile 5"
+            rot "git merge vier"
+            rot "type branch.txt" 0
+            grau "~Nun stehen alle Änderungen (´ZWEI´, ´DREI´, ´VIER´) an der richtigen Stelle."
+            grau "Auch wichtig zu wissen ist:"
+            gelb "War ein Branch erfolgeich, wird automatisch ein #com erstellt. Gab es Konflikte muss der Benutzer dieser lösen und selber ein #com erstellen. Wobei Konfliktfreie Inhalte breits im #sta sind (also git add ....)."
+            break
+        }
+        50
+        {
+            gelb "Wir wechseln nochmal in der Branch ´vier´ und machen eine Änderung in der branch.txt"
+            gelb "Danach welchseln wir in der Master-Branch."
+            rot "git checkout vier"
+            rot "edit branch.txt" 0
+            grau "~Irgendwas rein schreiben, egal was, hauptsache eine Veränderung."
+            rot "git add --all"
+            rot "git commit -m ´branch.txt geändert´" 0
+            rot "git checkout master" 0
+            break
+        }
+        51
+        {
+            gelb "Nun löschen wir die Branches: NeueKlassen zwei, drei und vier."
+            rot "git branch" 0
+            grau "~Wir sehen unsere vorhandenen Branches"
+            rot "git branch -d NeueKlassen"
+            rot "git branch -d zwei"
+            rot "git branch -d drei"
+            rot "git branch -d vier"
+            grau "~Beim letzten kommt eine Fehlermeldung, da hier ja noch eine Änderung vorhanden ist. Wir wollen aber trotzdem den Branch löschen. Dies geht mit einem großen -D"
+            rot "git branch -D vier"
+            rot "git branch"
+            grau "~Es gibt nur noch den Master-Branch in dem wir uns auch befinden."
+        }
+        52
+        {
+            gelb "Bei Änderung an einer Datei an gleichen Zeilen oder auch das Löschen dieser, führt zu Konflikten da git das nicht weiss, welche Zeile aus welchen Branch jetzt übernommen werden soll."
+            gelb "Hierfür gibt es Merge-Tools wie Meld oder P4Merge (natürlich noch andere) die kostenlos installiert werden können."
+            gelb "Man muss dann noch entsprechend git Konfigurieren!"
+            gelb "~Mit"
+            grün "git merge --abort" 0
+            gelb "wird git versuchen den Zustand VOR dem Merge wiederherzustellen (diese ist nur sicher, wenn es vor dem Merge-Befehl keine Änderungen gab (also alles gecommitet war oder ein #sta erstellt wurde)."
+            grau "Am anfachsten passt man dann die Konflikt-Dateien im Master-Branch manuell an und löscht diese aus den anderen Branch die gemerged werden sollen."
+            if (HasChoco)
+            {
+                gelb "~Wenn Du dich für Merge-Tools interessierst, kannst Du nun install-tools eingeben. Dann kommst Du in den Assistenten für ein Mergetool inkl. Konfiguration von Git."
+                rot "install-tools"
+            }
+            else
+            {
+                gelb "Leider hast Du kein Choco installiert, mit Choco könntest Du dir über den Tutorial-Mergetool-Assistenten ein Mergetool installieren und Git gleich Konfigurieren."                
+                if (-not ($anweisung))
+                {
+                    if (Test-AdminRecht)
+                    {
+                        if (fragen -frage "Soll Choco installiert werden?")
+                        {
+                            instchoco
+                        }
+                    }
+                    else
+                    {
+                        gelb "Starte die PowerShell als Administrator, führe das Tutorial-Skript erneut aus und gebe instchoco ein um Chocolatey zu installieren."
+                    }
+                }
+            }
+        }
+        53
+        {
+            gelb "Oft kommt es vor das im Master-Branch keine oder nur sehr wenig Änderungn vorhanden sind. Die meisten Änderungen gab es in einem Bransh."
+            gelb "Ein Merge funktioniert dann zwar perfekt, jedoch wird die Darstellung des History (git log --graph) sehr unübersichtlich."
+            gelb "Schöner wäre es, wenn es in der History nicht zu sehen wäre, also ein #com ohne die Branch-Verzweigungen."
+            gelb "Hierfür gibt es Rebasing. Es funktioniert grundsätzlich wie ein Merge."
+            gelb "Wir erstellen nun ein Branch, ändern dort etwas. Anschließend machen wir eine kleine Veränderung im Master-Branch."
+            rot "git branch base1"
+            rot "git checkout base1" 0
+            rot "edit code.cs" 0
+            grau "In der code.cs irgendeine Änderung machen. Hinzufügen, Löschen vom Text, eigenlich egal was."
+            rot "´Neue Datei´ > rebase.txt"
+            rot "git add --all" 0
+            rot "git commit -m ´Rebasetest´" 0
+            rot "git checkout master"
+            rot "´Neue Datei im Master´ > master.txt" 0
+            rot "git add --all" 0
+            rot "git commit -m ´Rebasetest´" 0
+        }
+        54
+        {
+            gelb "Nun noch den Rebase durchführen. Dann sollte allte Änderungen im Master-Branch sein."
+            rot "dir"
+            grau "~Die Branch.txt ist nicht da"
+            rot "type code.cs"
+            grau "~Auch die Änderungen in code.cs ist nicht vorhanden"
+            rot "git rebase base1"
+            rot "dir" 0
+            rot "type code.cs" 0
+            grau "~Nun sind die Änderungen im Master-Branch vorhanden"
+            rot "git log --graph --oneline --all"
+            grau "~Aber es ist nicht ersichtlich, das es mal ein Branch gab."
+        }
+        55
+        {
+            gelb "Mit Merge würde es anders aussehen."
+            if (-not ($anweisung))
+            {
+                $Global:MakeDiff = $false
+                if (fragen "Schritt 54 wiederholen?")
+                {
+                    $Global:Copy = git log --graph --all --oneline
+                    $Global:MakeDiff = $true
+                    s 54
+                }
+            }
+            cls
+            gelb "Du kannst den Schritt nun wiederholen. Versuche es dann mal mit"
+            rot "git merge base1"
+            rot "dir" 0
+            rot "type code.cs" 0
+            gelb "~Interessant ist dann die Darstellung der History"
+            rot "git log --graph --oneline --all"
+        }
+        56
+        {
+            if ($Global:MakeDiff)
+            {
+                $diff = (git log --graph --oneline --all)
+                Set-Content -path unterschied.txt -value "Log vom Rebase:"
+                $x = 1
+                Add-Content -path unterschied.txt -value  ($Global:Copy[0..10] | ForEach { "{0:00}: $_ " -f $x++ })
+                #                Add-Content -path unterschied.txt -value $Global:Copy[0..10]
+                Add-Content -path unterschied.txt -value "----------------------------------"
+                add-content -path unterschied.txt -value "Log vom Merge:"
+                $x = 1
+                add-content -path unterschied.txt -value  ($diff[0..10] | ForEach { "{0:00}: $_ " -f $x++ })
+                #                add-content -path unterschied.txt -value $diff[0..10]
+            }
+            gelb "Wenn es beim Rebase Konflikte gibt, muss zuerst genauso verfahren werden wie beim Merge."
+            gelb "Sind alle Konflikte beseitigt kann mit"
+            grün "git rebase --continue"
+            gelb "~Das Rebasing fortgesetzt werden."
+
+            if (Test-Path unterschied.txt)
+            {
+                if (fragen "Willst Du nochmal den Unterschid vom git log des Rebasing und der Merge sehen?")
+                {
+                    edit "unterschied.txt"
+                }
+            }
+        }
+        100
+        {
+            InitKapitel2
         }
         <# TODO __1__(Weiter) Nächster Schritt #>
     }
@@ -1438,5 +2391,10 @@ function Weiter
     $global:schritt = $nr
 }
 
+init
 
-# init
+rot "Solten Befehle nicht Funktionieren, so das Skript bitte mit vorangestelltem . ausführen"
+rot ". Tutorial-DE.ps1" 0
+
+
+
