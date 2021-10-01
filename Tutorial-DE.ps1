@@ -49,7 +49,7 @@ function BrowseServer
     param(
 
     )
-    ii "~\GIT_LESSON1\server\index.html"
+    ii "~/GIT_LESSON1/server/index.html"
 }
 
 
@@ -184,8 +184,8 @@ function InitKapitel2
     {
         init -silent 1
     }
-    $dir = "$([System.Environment]::GetFolderPath("user"))\GIT_LESSON1"
-    Set-Location c:\
+    $dir = "$([System.Environment]::GetFolderPath("user"))/GIT_LESSON1"
+    Set-Location ~
     if (Test-Path $dir)
     {
         Remove-Item $dir -Recurse -Force
@@ -208,8 +208,8 @@ Function Init
 
     $Global:MainInit = $True
 
-    $dir = "$([System.Environment]::GetFolderPath("user"))\GIT_LESSON1"
-    Set-Location c:\
+    $dir = "$([System.Environment]::GetFolderPath("user"))/GIT_LESSON1"
+    Set-Location ~
     if (Test-Path $dir)
     {
         Remove-Item $dir -Recurse -Force
@@ -258,7 +258,7 @@ Info               : Diesen Text
 Install            : Informationen zur Installation von git
 Install-tools      : Instalation von Tools (Editoren, Merge-Tools)"
 
-    New-Item -ItemType File -Name ".\hilfe.txt"  | Out-Null
+    New-Item -ItemType File -Name "./hilfe.txt"  | Out-Null
     Set-Content Hilfe.txt -Value $hilfe -Encoding utf8
 
     New-Item -ItemType File -Name "leer.txt" | Out-Null
@@ -421,7 +421,7 @@ function Info
     [CmdletBinding()]
     param(
     )
-    $dir = "$([System.Environment]::GetFolderPath("user"))\GIT_LESSON1\user1\Hilfe.txt"
+    $dir = "$([System.Environment]::GetFolderPath("user"))/GIT_LESSON1/user1/Hilfe.txt"
     Get-Content $dir | more
 }
 
@@ -610,15 +610,15 @@ function install-tools
                     cls
                     # Konfiguration von p4merge
                     $p4mPath = ""
-                    if (Test-Path -Path 'C:\Program Files\Perforce\p4merge.exe')
+                    if (Test-Path -Path 'C:/Program Files/Perforce/p4merge.exe')
                     {   
-                        $p4mPath = 'C:\Program Files\Perforce\p4merge.exe'
+                        $p4mPath = 'C:/Program Files/Perforce/p4merge.exe'
                     }
                     else
                     {
-                        if (Test-Path -Path "$([System.Environment]::GetFolderPath("user"))\AppData\Local\Perforce\p4merge.exe")
+                        if (Test-Path -Path "$([System.Environment]::GetFolderPath("user"))/AppData/Local/Perforce/p4merge.exe")
                         {
-                            $p4mPath = "$([System.Environment]::GetFolderPath("user"))\AppData\Local\Perforce\p4merge.exe"
+                            $p4mPath = "$([System.Environment]::GetFolderPath("user"))/AppData/Local/Perforce/p4merge.exe"
                         }
                     }
 
@@ -836,7 +836,7 @@ function HasGit()
     try
     {
         [string] $c = git | Out-String
-        return ($c.StartsWith("usage"))
+        return ($c.StartsWith("usage") -or ($c.StartsWith("Verwendung")))
     }
     catch
     {
@@ -1039,7 +1039,7 @@ Texte in Rot stellt die Anweisung oder die Befehlszeile dar, die exakt so eingeg
         weiss "~Hier können natürlich auch Pfade verwendet werden:"
         weiss "type .\code.cs        (aktueller Pfad)"
         weiss "type ..\user2\code.cs (ein Pfad zurück, dann Ordner user2 und dort die code.cs)"
-        weiss "type $([System.Environment]::GetFolderPath('User'))\GIT_LESSON1\user1\code.cs"
+        weiss "type $([System.Environment]::GetFolderPath('User'))/GIT_LESSON1/user1/code.cs"
     }
     elseif ($Was -eq "Navigation in der PowerShell")
     {
@@ -1099,11 +1099,11 @@ function Make19
     }
     @("Zweiter Ordner", "temp", "Dokumentation", "neu") | ForEach-Object {
         New-Item -ItemType Directory -Path $_  | Out-Null
-        New-Item -ItemType Directory -Path "$_\Unterordner" | Out-Null
-        New-Item -ItemType File -Path "$_\datei.txt" | Out-Null
-        New-Item -ItemType File -Path "$_\Unterordner\readme.txt" | Out-Null
+        New-Item -ItemType Directory -Path "$_/Unterordner" | Out-Null
+        New-Item -ItemType File -Path "$_/datei.txt" | Out-Null
+        New-Item -ItemType File -Path "$_/Unterordner/readme.txt" | Out-Null
     }
-    Set-Content ".\neu\Unterordner\readme.txt" -Value "die anderen Dateien sind leer."
+    Set-Content "./neu/Unterordner/readme.txt" -Value "die anderen Dateien sind leer."
 
 }
 
@@ -1239,7 +1239,7 @@ function Schritt
         if ($nr -gt 4) { Set-Content -Path leer.txt -Value "Änderung" }
         if ($nr -gt 5)
         {
-            Remove-Item .\datei1.txt
+            Remove-Item ./datei1.txt
             "Inhalt" > inhalt.txt
             git add leer.txt
             git commit --message "kleine Änderung"
@@ -1254,8 +1254,8 @@ function Schritt
 
         if ($nr -gt 11)
         {
-            mkdir .\ordner | Out-Null
-            @("datei1", "datei2", "datei3") | New-Item -ItemType File -Path { "Ordner\$_.txt" }
+            mkdir ./ordner | Out-Null
+            @("datei1", "datei2", "datei3") | New-Item -ItemType File -Path { "Ordner/$_.txt" }
             git add --all
             git commit --message "Neuer Ordner"
         }
@@ -1266,7 +1266,7 @@ function Schritt
         if ($nr -gt 19)
         {
             git add Dokumentation
-            git add .\neu\Unterordner\readme.txt
+            git add ./neu/Unterordner/readme.txt
             git commit -m "Viel hinzu"
             git tag viel
         }
@@ -1521,8 +1521,8 @@ function Schritt
             git init
             git add --all
             git commit -m "index.html erstellt"
-            insert-arrayinfile .\index.html "    Hello World!" 9
-            LineRemove-ArrayInFile .\index.html 11 1
+            insert-arrayinfile ./index.html "    Hello World!" 9
+            LineRemove-ArrayInFile ./index.html 11 1
         }
         if ($nr -gt 3)
         {
@@ -1531,8 +1531,8 @@ function Schritt
         }
         if ($nr -gt 4)
         {
-            md ..\server | Out-Null
-            git clone .git ..\server
+            md ../server | Out-Null
+            git clone .git ../server
         }
         if ($nr -gt 5)
         {
@@ -1543,17 +1543,17 @@ function Schritt
         }
         if ($nr -gt 6)
         {
-            cd ..\server
+            cd ../server
             git branch nix
             git checkout nix
-            cd ..\user1
-            git push --set-upstream ..\server master
+            cd ../user1
+            git push --set-upstream ../server master
         }
         if ($nr -gt 7)
         {
-            cd ..\server
+            cd ../server
             git checkout master
-            cd ..\user1
+            cd ../user1
         }
         if ($nr -gt 8)
         {
@@ -1563,9 +1563,9 @@ function Schritt
         }
         if ($nr -gt 9)
         {
-            cd ..\server
-            git pull ..\user1
-            cd ..\user1
+            cd ../server
+            git pull ../user1
+            cd ../user1
         }  
 
     }
@@ -1636,10 +1636,10 @@ function ??
         }
         if ($nr -eq 7)
         {
-            rot "cd ..\server"
+            rot "cd ../server"
             rot "git checkout master" 0
             rot "bs" 0
-            rot "cd ..\user1"
+            rot "cd ../user1"
         }
         if ($nr -eq 8)
         {
@@ -1804,7 +1804,7 @@ function Weiter
             grau "Mit h könntest Du sogar eine Hilfe angezeigt bekommen (mit q beenden)"
             gelb "`nScrolle/Blätter mit Cursor runter/Bild runter nach ganz unten zur ersten Datei..."
             Read-Host -Prompt "Bereit? Drücke Return (dauert ein paar Sekunden)"
-            $path = "$([System.Environment]::GetFolderPath("USER"))\_1_2_3_4_5"
+            $path = "$([System.Environment]::GetFolderPath("USER"))/_1_2_3_4_5"
 
             if (Test-Path $path)
             {
@@ -1867,7 +1867,7 @@ function Weiter
         }
         1
         {
-            gelb "Git für $dir\user1 Initialisieren (#rep erstellen)" 
+            gelb "Git für $dir/user1 Initialisieren (#rep erstellen)" 
             grau "Der Befehl 'init' erstellt ein leeres #rep im aktuellen Ordner" 
             Write-Host "Und denk daran, mit w (oder weiter) geht es weiter" -ForegroundColor Cyan
             rot "git init"
@@ -1977,7 +1977,7 @@ function Weiter
             gelb "wird die Dateistruktur aufgezeigt. Schreibt man nach dem : ein Datei- oder Verzeichnis Namen wird nur dies angezeigt."
             gelb "Wir erstellen nun ein Ordner mit 3 Dateien und machen ein #com."
             rot "md ordner"
-            rot "@(`"datei1`", `"datei2`", `"datei3`") | New-Item -ItemType File -Path {`"Ordner\`$_.txt`"}" 0
+            rot "@(`"datei1`", `"datei2`", `"datei3`") | New-Item -ItemType File -Path {`"Ordner/`$_.txt`"}" 0
             rot "git add --all"
             rot "git commit --message `"Neuer Ordner`"" 0
             break
@@ -2706,7 +2706,7 @@ function Weiter
         }
         104
         {
-            md "..\server" | Out-Null
+            md "../server" | Out-Null
             gelb "Der Server wurde inzwischen eingerichtet und steht über den Ordner ..\server bereit."
             gelb "Schaue dich mit dir um, anschließend werden wir unser Repository in der Server klonen."
             rot "dir .."
@@ -2770,7 +2770,7 @@ function Weiter
     $nr++
     $global:schritt = $nr
 }
-if (-not (Test-Path ~\ScriptSilent))
+if (-not (Test-Path ~/ScriptSilent))
 {
     init
 
