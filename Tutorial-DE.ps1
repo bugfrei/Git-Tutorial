@@ -9,11 +9,11 @@
     Set-Content $file -Value $content
 }
 
-function gelb($t) { $t = (rep $t); Write-Host $t -ForegroundColor Yellow }
-function grün($t) { $t = (rep $t); Write-Host $t -ForegroundColor Green }
-function grau($t) { $t = (rep  $t); Write-Host $t -ForegroundColor Gray }
-function weiss($t) { $t = (rep  $t); Write-Host $t -ForegroundColor White }
-function cyan($t) { $t = (rep  $t); Write-Host $t -ForegroundColor Cyan }
+function gelb($t) { $t = (rep $t); Write-Host $t -ForegroundColor Yellow; $Global:FF = $false }
+function grün($t) { $t = (rep $t); Write-Host $t -ForegroundColor Green; $Global:FF = $false }
+function grau($t) { $t = (rep  $t); Write-Host $t -ForegroundColor Gray; $Global:FF = $false }
+function weiss($t) { $t = (rep  $t); Write-Host $t -ForegroundColor White; $Global:FF = $false }
+function cyan($t) { $t = (rep  $t); Write-Host $t -ForegroundColor Cyan; $Global:FF = $false }
 
 function rot($t, $lf = 1)
 { 
@@ -26,9 +26,34 @@ function rot($t, $lf = 1)
     {
         Write-Host "$t" -ForegroundColor Red 
     }
+    $Global:FF = $false 
+}
+function HTMLBase
+{
+    return "<!DOCTYPE html>`n<html lang=`"de`">`n<head>`n    <meta charset=`"UTF-8`">`n    <meta http-equiv=`"X-UA-Compatible`" content=`"IE=edge`">`n    <meta name=`"viewport`" content=`"width=device-width, initial-scale=1.0`">`n    <title>Document</title>`n</head>`n<body>`n    `n</body>`n</html>`n"
 }
 
-function Edit($file, $ask = 0)
+function browse
+{
+    [CmdletBinding()]
+    [Alias("web", "b")]
+    param (
+        [string] $file = "index.html"
+    )
+    ii $file    
+}
+function BrowseServer
+{
+    [CmdletBinding()]
+    [Alias("webs", "server", "bs")]
+    param(
+
+    )
+    ii "~\GIT_LESSON1\server\index.html"
+}
+
+
+function Edit($file = "index.html", $ask = 0)
 {
     if ($ask -eq 1)
     {
@@ -39,6 +64,10 @@ function Edit($file, $ask = 0)
         if ($Global:Editor -eq "vim")
         {
             vim $file
+        }
+        elseif ($Global:Editor -eq "gvim")
+        {
+            gvim $file
         }
         else
         {
@@ -81,6 +110,15 @@ function CodeCSBugdel()
     $erg = LineRemove-Array -SourceArray $altTeil -Zeile 8 -AnzahlZeilen 1
     Set-Content -Path code.cs -Value $erg
 }
+function Insert-ArrayInFile
+{
+    param($File,
+        $InsertArray,
+        [int] $Zeile)
+    $sa = Get-Content -Path $File
+    $da = Insert-Array $sa $InsertArray $Zeile
+    Set-Content -Path $File -Value $da
+}
 function Insert-Array
 {
     param(
@@ -104,6 +142,16 @@ function Insert-Array
     }
 
     $neu
+}
+
+function LineRemove-ArrayInFile
+{
+    param($File,
+        [int] $Zeile,
+        [int] $AnzahlZeilen)
+    $sa = Get-Content -Path $File
+    $da = LineRemove-Array $sa $Zeile $AnzahlZeilen
+    Set-Content -Path $File -Value $da
 }
 
 function LineRemove-Array
@@ -186,7 +234,7 @@ q      : Ausgabe beenden (auch nötigt am Ende (END))
 `nKopieren kann man, in dem man den Bereich markiert und dann ein Rechtsklick darauf macht.
 `nDas ^ Zeichen wir eingegeben, in dem man links oben (links neben der 1) die ^ Taste drück und dann das nächste Zeichen oder Space (^! mit ^-Taste gefolgt von den !)
 `nTexte in Gelb sind Anweisungen
-Texte in Gruen stellen Beispiele dar
+Texte in Gruen stellen Beispiele oder einzugebende Texte dar
 Texte in Grau stellen zusätzliche Informationen dar
 Texte in Rot stellt die Anweisung oder die Befehlszeile dar, die exakt so eingegeben werden muss
 Allen Git-'Befehlen' muss git (=> das eigentliche Programm) vorangestellt werden!
@@ -202,6 +250,9 @@ Schritt <nr> <k>   : Springt zum angegeben Schritt <nr> des Kapitels <k> (z.B. S
                      Ohne Angabe des Kapitels (s 10) wird innerhalb des aktuellen Kapitel gesprungen.
 Inhalt             : Zeigt eine Kapiteluebersicht mit der Moeglichkeit ein Kapitel zu waehlen
 Init               : Setzt das Tutorial zurueck. Danach faengt man mit w oder weiter bei Schritt 1 an
+edit <datei>       : Nutzt den gewählten Editor zum editieren der Datei (ohne Datei wird index.html editiert; s. Kapitel 2)
+browse <datei> (b) : browse oder b öffnet die angegebene Datei (oder index.html falls keine angegeben) im Standard-Browser
+BrowseServer (bs)  : Öffnet die index.html auf dem server(-Verzeichnis) im Standard-Browser
 Hilfe (oder help)  : Liste die Befehle auf (dieser Text). Mit 'Hilfe <Strg+Space> kann angegeben werden, über was man Hilfe möchte.
 Info               : Diesen Text
 Install            : Informationen zur Installation von git
@@ -244,7 +295,8 @@ Install-tools      : Instalation von Tools (Editoren, Merge-Tools)"
             weiss "Welchen Text-Editor möchtest Du verwenden?~"
             if (HasVIM)
             {
-                weiss "V.  VIM"
+                weiss "V. VIM (Tutorial für VIM mit vimtutor)"
+                weiss "G. GVIM (VIM in extra Fenster mit Menüs - Einsteigerfreundlicher aber extra Fenster!)"
             }
             else
             {
@@ -253,6 +305,18 @@ Install-tools      : Instalation von Tools (Editoren, Merge-Tools)"
                     weiss "V. VIM (vorher automatisch installieren)"
                 }
             }
+            if (HasCode)
+            {
+                weiss "C. Visual Studio Code"
+            }
+            else
+            {
+                if (HasChoco)
+                {
+                    weiss "C. Visual Studio Code (vorher automatisch installieren)"
+                }
+            }
+
             weiss "N. Notepad"   
             weiss "S. Standard Windows Text-Editor (für .txt Dateien)"
             $ein = Read-Host -Prompt "Bitte wählen"
@@ -271,6 +335,37 @@ Install-tools      : Instalation von Tools (Editoren, Merge-Tools)"
                     }
                 }
             }
+            if ($ein -eq "G")
+            {
+                if (HasVim)
+                {
+                    $Global:Editor = "gvim"
+                }
+                else
+                {
+                    if (HasChoco)
+                    {
+                        choco install vim -y
+                        $Global:Editor = "gvim"
+                    }
+                }
+            }
+            if ($ein -eq "C")
+            {
+                if (HasCode)
+                {
+                    $Global:Editor = "code"
+                }
+                else
+                {
+                    if (HasChoco)
+                    {
+                        choco install vscode -y
+                        $Global:Editor = "code"
+                    }
+                }
+            }
+
             if ($ein -eq "N")
             {
                 $Global:Editor = "notepad"
@@ -386,8 +481,15 @@ function Zurück
     [Alias("z", "Zurueck")]
     param(
     )
-
-    Schritt (([int]$global:schritt) - 2)
+    $nr = $Global:Schritt
+    $kapitel = [Math]::Truncate($nr / 100)
+    $nrx = ($nr - ($kapitel * 100)) - 1 
+    if (($nrx - 1) -eq 0)
+    {
+        gelb "Verwendet s <Schritt> <Kapitel> um Kapitel zu wechseln."
+        Start-Sleep -Seconds 2
+    }
+    Schritt ($nrx - 1)
 }
 
 
@@ -606,8 +708,11 @@ function Install
         {
             Clear-Host
             Write-Host "Willkommen zum Installationsassistenten für git."
-            Write-Host "Um eine automatische Installation durchführen zu können, bitte den Assistenten mit q beenden, die PowerShell oder ISE als Administrator starten und das Tutorial-DE.ps1-Skript erneut ausführen und nochmal install eingeben." -ForegroundColor Red
-            Write-Host "`nBitte wählen:"
+            if (not (Test-AdminRecht))
+            {
+                Write-Host "Um eine automatische Installation durchführen zu können, bitte den Assistenten mit q beenden, die PowerShell oder ISE als Administrator starten und das Tutorial-DE.ps1-Skript erneut ausführen und nochmal install eingeben." -ForegroundColor Red
+                Write-Host "`nBitte wählen:"
+            }
             Write-Host "C.  Chrome mit git Webseite öffnen"
             Write-Host "E.  Edge mit git Webseite öffnen"
             Write-Host "A.  Automatische Installation (benötigt Administrator-Rechte; installiert zuvor Chocolatey und damit dann git)"
@@ -754,7 +859,7 @@ function Hilfe
             "Alias", "Cmdlet", "Powershell Befehle",
             "Ordner anzeigen", "Dateiinhalte anzeigen",
             "Navigation in der PowerShell",
-            "Befehlesparameter")]
+            "Befehlesparameter", "VIM")]
         $Was = "Befehle"
     )
 
@@ -772,6 +877,9 @@ function Hilfe
         Write-Host "                     Ohne Angabe des Kapitels (s 10) wird innerhalb des aktuellen Kapitel gesprungen." -ForegroundColor Cyan
         Write-Host "Inhalt             : Zeigt eine Kapitelübersicht mit der Möglichkeit ein Kapitel zu wählen" -ForegroundColor Cyan
         Write-Host "Init               : Setzt das Tutorial zurück. Danach fängt man mit w oder weiter bei Schritt 1 ein" -ForegroundColor Cyan
+        Write-Host "edit <datei>       : Nutzt den gewählten Editor zum editieren der Datei (ohne Datei wird index.html editiert; s. Kapitel 2)" -ForegroundColor Cyan
+        Write-Host "browse <datei> (b) : browse oder b öffnet die angegebene Datei (oder index.html falls keine angegeben) im Standard-Browser" -ForegroundColor Cyan
+        Write-Host "BrowseServer (bs)  : Öffnet die index.html auf dem server(-Verzeichnis) im Standard-Browser" -ForegroundColor Cyan
         Write-Host "Hilfe (oder help)  : Liste die Befehle auf (dieser Text). Mit 'Hilfe <Strg+Space> kann angegeben werden, über was man Hilfe möchte." -ForegroundColor Cyan
         Write-Host "Info               : Kompletter Info Text (der von init)" -ForegroundColor Cyan
         Write-Host "Install            : Informationen zur Installation von git" -ForegroundColor Cyan
@@ -796,7 +904,7 @@ q      : Ausgabe beenden (auch nötigt am Ende (END))" -ForegroundColor Cyan
     elseif ($Was -eq "Textfarben")
     {
         Write-Host "Texte in Gelb sind Anweisungen
-Texte in Gruen stellen Beispiele dar
+Texte in Gruen stellen Beispiele oder einzugebende Texte dar
 Texte in Grau stellen zusätzliche Informationen dar
 Texte in Rot stellt die Anweisung oder die Befehlszeile dar, die exakt so eingegeben werden muss" -ForegroundColor Cyan
     }
@@ -962,6 +1070,18 @@ Texte in Rot stellt die Anweisung oder die Befehlszeile dar, die exakt so eingeg
         weiss "Die Bash-Konsole besitzt dann Parameterlisten und Vervollständigung von Befehlen und Parameter."
         weiss "ACHTUNG: In der Bash-Konsole werden absolute Pfade nicht mit C:\User...\ sondern mit C/User/.../ angegeben!"
     }
+    elseif ($Was -eq "VIM")
+    {
+        weiss "VIM ist ein Texteditor für Konsolen (GVIM ist mit extra Fenster und Menüs - Etwas anwenderfreundlicher, jedoch während der Arbeit in einer Konsole ist ein Extra Fenster für schnelles Editieren eher störend)."
+        weiss "~Der große Vorteil von VIM ist, das man keine Maus benötigt. Der Handwechsel von Tastatur zur Maus entfällt als vollständig. Für alles was man mit der Maus machen würde gibt es Befehle.~Ein weiterer Vorteil ist, das Vim in der Konsole geöffnet wird, kein Fenster das man suchen muss, oder aktivieren. Kein Wechsel zwischen Maus und Fenster, nur Tastatur. Glaube mir effektiver geht es nicht."
+        weiss "~VIM befindet sich Grundsätzlich im Normalmodus. Hier können Befehle mit einzellnen Tasten oder Kombinationen (z.B. dd löscht die aktuelle Zeile) eingegeben werden."
+        weiss "~Mit : gelangt man in den Befehlsmodus, hier werden Befehle sichtbar eingegeben und mit Return ausgeführt (z.B. :q beendet VIM, :q! beendet Vim auch bei Änderung in der Datei (gehen Verloren), :w schreibt die Datei, :wq Schreibt und Beendet)"
+        weiss "~Im Normalmodus gelangt man mit i in den Einfügemodus. Hier kann man Texte eingeben, aber keine Befehle mehr ausführen. Zurück in den Normalmodus gelangt man hier mit Esc."
+        rot "~Die Verwendung von VIM ist Anfang sehr gewöhnungsbedürftig. Jedoch wenn man die Befehle Intus hat, kann man damit extrem effektiv arbeiten."
+        weiss "Ich Empfehle das Ausführen des Tutorials für VIM mit vimtutor"
+        rot "vimtutor"
+        grau "~Ggfs. erscheinende Meldung da gvim nicht gefunden werden kann einfach weg klicken."
+    }
     else
     {
         rot "Zu diesem Thema gibt es leider noch keine Hilfe!"
@@ -1105,6 +1225,7 @@ function Schritt
     $kapitel = [Math]::Truncate($nr / 100)
     $nrx = $nr - ($kapitel * 100)
     $kapitel++;
+    $nrz = $nr
     if ($silent -eq 0)
     {
         gelb("Springe zum Schritt $nrx - Kapitel $kapitel")
@@ -1388,7 +1509,65 @@ function Schritt
     }
     if ($kapitel -eq 2)
     {
-        initkapitel2
+        $nr = $nrx
+        Write-Host $nr -ForegroundColor Magenta
+        if ($nr -gt 1)
+        {
+            initkapitel2
+        }
+        if ($nr -gt 2)
+        {
+            Set-Content -Path index.html -Value (HTMLBase)
+            git init
+            git add --all
+            git commit -m "index.html erstellt"
+            insert-arrayinfile .\index.html "    Hello World!" 9
+            LineRemove-ArrayInFile .\index.html 11 1
+        }
+        if ($nr -gt 3)
+        {
+            git add --all
+            git commit -m "Hello World!"
+        }
+        if ($nr -gt 4)
+        {
+            md ..\server | Out-Null
+            git clone .git ..\server
+        }
+        if ($nr -gt 5)
+        {
+            LineRemove-ArrayInFile index.html 10 1
+            Insert-ArrayInFile index.html @("    <h1>Hello World!</h1>") 10
+            git add --all
+            git commit -m "Überschrift"
+        }
+        if ($nr -gt 6)
+        {
+            cd ..\server
+            git branch nix
+            git checkout nix
+            cd ..\user1
+            git push --set-upstream ..\server master
+        }
+        if ($nr -gt 7)
+        {
+            cd ..\server
+            git checkout master
+            cd ..\user1
+        }
+        if ($nr -gt 8)
+        {
+            Insert-ArrayInFile index.html @("    Willkommen in der Welt von git.") 11
+            git add --all
+            git commit -m "Willkommen"
+        }
+        if ($nr -gt 9)
+        {
+            cd ..\server
+            git pull ..\user1
+            cd ..\user1
+        }  
+
     }
     
     
@@ -1396,9 +1575,100 @@ function Schritt
     
     
     <# TODO __2__(Schritt #) Schritt nr erstellen  #>
-    $global:schritt = $nr
+    $global:schritt = $nrz
     weiter
 }
+
+function ??
+{
+    param(
+        [int] $add = 0
+    )
+    $nr = $Global:Schritt
+    $kapitel = [Math]::Truncate($nr / 100)
+    $nrx = ($nr - ($kapitel * 100)) - 1 + $add
+    $kapitel++;
+    $Global:FF = $true
+   
+    if ($add -eq 0)
+    {
+        cls
+        $st = "Schritt $nrx (Kapitel $kapitel)"; Write-Host (" " * ($st.Length) * 3 + "`n" + " " * ($st.Length) + $st + " " * ($st.Length) + "`n" + " " * ($st.Length) * 3)  -BackgroundColor DarkGray -ForegroundColor Black
+        Write-Host "Zusätzliche Hilfe:" -ForegroundColor DarkGray
+    }
+
+    $nr = $nrx
+    if ($Kapitel -eq 1)
+    {
+        ;
+    }
+    elseif ($Kapitel -eq 2)
+    {
+        if ($nr -eq 2)
+        {
+            rot "git init" 0
+            rot "git add --all" 0
+            rot "git commit -m ´index.html erstellt´" 0
+            rot "edit"
+            grün "..."
+            grün "<body>"
+            grün "    Hello World!"
+            grün "</body>"
+            grün "..."
+            rot "b"
+        }
+        if ($nr -eq 3)
+        {
+            rot "git add --all" 0
+            rot "git commit -m ´Hello World!´" 0
+        }
+        if ($nr -eq 5)
+        {
+            rot "edit index.html"
+            grau "Falls nicht bereits geöffnet."
+            grün "..."
+            grün "<body>"
+            grün "    <h1>Hello World!<h1>"
+            grün "</body>"
+            grün "..."
+            rot "git add --all"
+            rot "git commit -m ´Überschrift´" 0
+        }
+        if ($nr -eq 7)
+        {
+            rot "cd ..\server"
+            rot "git checkout master" 0
+            rot "bs" 0
+            rot "cd ..\user1"
+        }
+        if ($nr -eq 8)
+        {
+            rot "edit index.html"
+            grau "Falls nicht bereits geöffnet."
+            grün "..."
+            grün "<body>"
+            grün "    <h1>Hello World!<h1>"
+            grün "    Willkommen in der Welt von git."
+            grün "</body>"
+            grün "..."
+            rot "git add --all"
+            rot "git commit -m ´Willkommen´" 0
+        }
+
+        
+    }
+
+    # TODO: ??
+
+    if ($Global:FF)
+    {
+        gelb "Zu diesem Schritt gibt es keine zusätzliche Hilfe.~~Gebe a ein, um die normale Anweisung einzusehen."
+        rot "a"
+    }
+
+}
+
+
 
 function Weiter
 {
@@ -2264,6 +2534,7 @@ function Weiter
             rot "git branch -D vier"
             rot "git branch"
             grau "~Es gibt nur noch den Master-Branch in dem wir uns auch befinden."
+            break
         }
         52
         {
@@ -2297,6 +2568,7 @@ function Weiter
                     }
                 }
             }
+            break
         }
         53
         {
@@ -2316,6 +2588,7 @@ function Weiter
             rot "´Neue Datei im Master´ > master.txt" 0
             rot "git add --all" 0
             rot "git commit -m ´Rebasetest´" 0
+            break
         }
         54
         {
@@ -2330,6 +2603,7 @@ function Weiter
             grau "~Nun sind die Änderungen im Master-Branch vorhanden"
             rot "git log --graph --oneline --all"
             grau "~Aber es ist nicht ersichtlich, das es mal ein Branch gab."
+            break
         }
         55
         {
@@ -2351,6 +2625,7 @@ function Weiter
             rot "type code.cs" 0
             gelb "~Interessant ist dann die Darstellung der History"
             rot "git log --graph --oneline --all"
+            break
         }
         56
         {
@@ -2379,22 +2654,127 @@ function Weiter
                     edit "unterschied.txt"
                 }
             }
+            break
         }
-        100
+        101
         {
+            gelb "Das war jetzt die Theorie. Jetzt wird es etwas praktischer."
+            gelb "Wir entwickeln eine kleine Webseite, Simulieren später zwei Server und es werden mehrere Mitarbeiter an dem Projekt arbeiten."
+            if ($Global:Editor -ne "code")
+            {
+                gelb "~Für dieses Kapitel empfehle ich Visual Studio Code als Editor."
+                if (HasCode)
+                {
+                    if (fragen -frage "Soll ich Visual Studio Code als Standardeditor für das Tutorial wählen?" -jaDefault)
+                    {
+                        $Global:Editor = "code"
+                    }
+                    else
+                    {
+                        gelb "Gebe Install-Tools ein um Visual Studio Code zu installieren oder gehe auf die entsprechende Website um Visual Studio Code herunterzuladen und manuell zu installieren."
+                        rot "Install-Tools"
+                    }
+                }
+            }
+            else
+            {
+                gelb "~Sehr schön, Visual Studio Code ist als Editor gewählt. Dieser ist für dieses Kapitel am besten geeignet."
+            }
+            grau "~Gehe in den nächsten Schritt wenn Du soweit bist."
             InitKapitel2
+            break
         }
+        102
+        {
+            Set-Content -Path index.html -Value (HTMLBase) -NoNewline
+            gelb "Ich habe eine index.html ohne body-Inhalt erzeugt. Für dieses Kapitel sind HTML Kenntnisse sicher von Vorteil, es geht aber auch ohne." 
+            gelb "~Die index.html kann im Browser mit browse oder einfach nur b im Standard-Browser geöffnet werden. Wird browser bzw. b eine Datei mit angegeben, so wird diese geöffnet."
+            gelb "Genauso verhält es sich mit edit. Ohne Datei wird im eingestellten Editor die index.html editiert."
+            gelb "Für diese html-Vorlage machen wir unser erstes Commit, dafür müssen wir aber erst ein Repository initialisieren."
+            rot "Für einfache und bereits vorgekommene git-Befehle werde ich hier keine Anleitung mehr in rot darstellen."
+            rot "Solltest Du dennoch Anweisungen brauchen, so erhälst Du sie durch Eingabe von ??." 0
+            gelb "~Wir fangen mal so an wie man ein Projekt anfängt: Mit ´Hello World!´"
+            gelb "Editiere die index.html und schreibe in der leeren Zeile zwischen <body> und </body> ´Hello World!´. Dann natürlich speichern."
+            rot "Aufgabe erledigen oder ?? für Anweisungen"
+            break
+        }
+        103
+        {
+            gelb "Sehr schön, für diese kleine Änderung erstellen wir nun ein Commit."
+            gelb "Vergiss nicht ?? für die Anweisungen, probiere es aber erstmal ohne diese Hilfe."
+            break
+        }
+        104
+        {
+            md "..\server" | Out-Null
+            gelb "Der Server wurde inzwischen eingerichtet und steht über den Ordner ..\server bereit."
+            gelb "Schaue dich mit dir um, anschließend werden wir unser Repository in der Server klonen."
+            rot "dir .."
+            rot "dir ..\server" 0
+            grau "Der Server ist natürlich noch leer"
+            rot "git clone .git ..\server"
+            grau "Wird klonen also unser lokales .git-Repository (wenn Du dir -Hidden eingibst, siehst Du im Explorer den Ordner .git) nach ..\server"
+            rot "dir --Hidden"
+            rot "dir ..\server" 0
+            grau "Nun ist unsere HTML-Seite auf dem Server."
+            break
+        }
+        105
+        {
+            gelb "´Hello World!´ soll nun die Überschrift der Seite sein. Wir umschließen diese Zeile in ein <h1>-Tag."
+            gelb "Anschließend speichern und ein #com erstellen."
+            break
+        }
+        106
+        {
+            gelb "Mit b können wir uns nun die geänderte Webseite im Browser ansehen. Mit bs öffnet der Browser immer die index.html im ..\server-Verzeichnis."
+            rot "b"
+            rot "bs" 0
+            gelb "Wir sehen, der Server hat noch die alte Version."
+            gelb "Wir schicken dem Server nun die neue. Dafür muss sich der Server auf einem anderem Branch befinden da man noch von master zur master pushen kann."
+            rot "cd ..\server"
+            rot "git branch nix" 0
+            rot "git checkout nix" 0
+            rot "cd ..\user1" 0
+            rot "git push --set-upstream ..\server master" 0
+            break
+        }
+        107
+        {
+            gelb "Nun müssen wir auf dem Server nur noch in den master-Branch wechseln, dann sollte der Browser Hello World! ebenfalls als Überschrift anzeigen."
+            gelb "Wir wechseln danach wieder in das ..\user1 Verzeichnis."
+            break
+        }
+        108
+        {
+            gelb "Nun ist es immer umständlich im Server auf einen anderen Branch zu wechseln, zu pushen und wieder zurück zu wechseln. Daher werden wir die nächste Änderung pullen."
+            gelb "~Wir schreiben unter unserer Überschrift ´Willkommen in der Welt von git.´."
+            gelb "Anschließend speichern, #com erstellen."
+            break
+        }
+        109
+        {
+            gelb "Auch jetzt hat natürlich der Server diese Zeile noch nicht. Wir wechseln zum Server und pullen uns die Änderung."
+            rot "cd ..\server"
+            rot "git pull ..\user1" 0
+            rot "cd ..\user1" 0
+            rot "bs"
+            grau "Wir sehen, nun hat der Server die Änderung."
+            grau "Es liegt in unserem Fall einem frei push oder pull zu verwenden. Bei Verwendung von GitHub bleibt nur push als Möglichkeit, da wir nich zu GitHub können um auf deren Server ein pull zu machen."
+            grau "Ansonsten verhält es sich zwischen einen Verzeichnis im eigenen Dateisystem und einem Server/GitHub sehr ähnlich. Es gibt noch Möglichkeiten den Remote-Server (GitHub) zu konfurieren (Benutzername, Passwort/Token). Aber sonnst ist es sehr ähnlich."
+        }
+
         <# TODO __1__(Weiter) Nächster Schritt #>
     }
     
     $nr++
     $global:schritt = $nr
 }
+if (-not (Test-Path ~\ScriptSilent))
+{
+    init
 
-init
-
-rot "Solten Befehle nicht Funktionieren, so das Skript bitte mit vorangestelltem . ausführen"
-rot ". Tutorial-DE.ps1" 0
-
-
+    rot "Solten Befehle nicht Funktionieren, so das Skript bitte mit vorangestelltem . ausführen"
+    rot ". Tutorial-DE.ps1" 0
+}
 
