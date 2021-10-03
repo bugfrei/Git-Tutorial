@@ -1956,7 +1956,7 @@ function Weiter
             grau "Hierzu die Befehle mit Cursor hoch suchen, ändern und mit return ausführen)"
             grau "z.B. git diff --stat 5304232b1^!"
             rot "git diff --stat bf7ec81f06^!"
-            rot "git diff --statt 941364c bf7ec81f^!" 0
+            rot "git diff --stat 941364c bf7ec81f^!" 0
             grau "Die Hash hier sind natürlich Beispiele."
             break
         }
