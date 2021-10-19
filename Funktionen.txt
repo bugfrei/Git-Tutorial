@@ -1,2 +1,0 @@
-Insert-ArrayInFile	$File	$Array	$Zeile
-LineRemove-ArrayInFile	$File	$Zeile	$AnzahlZeilen
